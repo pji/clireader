@@ -285,6 +285,32 @@ class PageTestCase(ut.TestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
+    # Test Page.inout()
+    @patch('clireader.clireader.Terminal.inkey', return_value='.')
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    def test_input(self, mock_height, mock_width, mock_inkey):
+        """When called, Page.input() will wait for keyboard input.
+        When the input is received, it will return that input.
+        """
+        # Expected value.
+        exp = mock_inkey()
+
+        # Test data and state.
+        mock_height.return_value = self.term_h
+        mock_width.return_value = self.term_w
+        page = clireader.Page(
+            self.text_overflow,
+            title=self.title,
+            frame='light'
+        )
+
+        # Run test.
+        act = page.input()
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
     # Test Page.load()
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)

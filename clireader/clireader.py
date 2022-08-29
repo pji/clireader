@@ -5,11 +5,13 @@ clireader
 A module for paging through text in the terminal.
 """
 from textwrap import wrap
+from time import sleep
 from typing import Generator, Optional
 
 from blessed import Terminal
 
 
+# Utility classes.
 class Box:
     """A class to track the characters used to draw a box in a
     terminal.
@@ -87,6 +89,7 @@ class Box:
             raise ValueError(reason)
 
 
+# Terminal controller.
 class Page:
     """View pages of text in a terminal."""
     def __init__(
@@ -170,6 +173,13 @@ class Page:
         for line in text:
             print(self.term.move(y, x) + line)
             y += 1
+
+    def input(self) -> str:
+        """Receive key presses from the user."""
+        with self.term.cbreak():
+            raw = self.term.inkey()
+        resp = str(raw)
+        return resp
 
     def load(self, text: str, title: str = '') -> None:
         """Update the text pages being shown."""
