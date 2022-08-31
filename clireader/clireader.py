@@ -89,6 +89,38 @@ class Box:
             raise ValueError(reason)
 
 
+class Pager:
+    """Manage the text being displayed."""
+    def __init__(
+        self,
+        text: str = '',
+        title: str = '',
+        height: int = 20,
+        width: int = 76
+    ) -> None:
+        self.height = height
+        self.width = width
+        self.title = title
+        self.text = text
+
+    @property
+    def pages(self) -> tuple[tuple[str, ...], ...]:
+        """The paged text."""
+        return self._flow()
+
+    @property
+    def page_count(self) -> int:
+        return len(self.pages)
+
+    def _flow(self) -> tuple[tuple[str, ...], ...]:
+        wrapped = wrap(self.text, self.width)
+        pages = []
+        for i in range(0, len(wrapped), self.height):
+            page = wrapped[i: i + self.height]
+            pages.append(tuple(page))
+        return tuple(pages)
+
+
 # Terminal controller.
 class Page:
     """View pages of text in a terminal."""

@@ -403,3 +403,97 @@ class PageTestCase(ut.TestCase):
 
         # Determine test result.
         self.assertListEqual(exp, act)
+
+
+class PagerTestCase(ut.TestCase):
+    def setUp(self):
+        self.attrs = {
+            'height': 20,
+            'pages': (),
+            'page_count': 0,
+            'text': '',
+            'title': '',
+            'width': 76,
+        }
+
+    # Initialization tests.
+    def test_init_defaults(self):
+        """When passed no values at initialization, the Pager object
+        should have the default attribute values.
+        """
+        # Expected value.
+        exp = self.attrs
+
+        # Run test and gather actuals.
+        pager = clireader.Pager()
+        act = {key: getattr(pager, key) for key in exp}
+
+        # Determine test results.
+        self.assertDictEqual(exp, act)
+
+    def test_init_set_attrs(self):
+        """When passed allowed parameters, the Pager object should
+        set those parameters as attributes.
+        """
+        # Expected value.
+        exp = self.attrs
+        exp['height'] = 10
+        exp['pages'] = (('spam',),)
+        exp['page_count'] = 1
+        exp['text'] = 'spam'
+        exp['title'] = 'eggs'
+        exp['width'] = 15
+
+        # Run test and gather actuals.
+        pager = clireader.Pager(
+            text=exp['text'],
+            title=exp['title'],
+            height=exp['height'],
+            width=exp['width'],
+        )
+        act = {key: getattr(pager, key) for key in exp}
+
+        # Determine test results.
+        self.assertDictEqual(exp, act)
+
+    # Pagination tests.
+    def test_pagination(self):
+        """When called, Pager.pages should return the text paginated
+        to the defined height and width for the object.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        lines = []
+        for page in exp:
+            lines.extend(page)
+        text = ' '.join(lines)
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
