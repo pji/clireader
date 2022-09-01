@@ -12,6 +12,62 @@ from blessed import Terminal
 from clireader import clireader
 
 
+class ViewerTestCase(ut.TestCase):
+    topleft = '\x1b[1;2H'
+    bold = '\x1b[1m'
+    rev = '\x1b[7m'
+    loc = '\x1b[{};{}H'
+
+    def setUp(self):
+        # Common test data.
+        self.term = Terminal()
+        self.height = 8
+        self.width = 14
+        self.text = 'Eggs.'
+        self.tittle = 'spam'
+
+        # Common expected values.
+        self.frame = [
+            call(self.loc.format(1, 1) + '┌────────────┐'),
+            call(self.loc.format(2, 1) + '│            │'),
+            call(self.loc.format(3, 1) + '│            │'),
+            call(self.loc.format(4, 1) + '│            │'),
+            call(self.loc.format(5, 1) + '│            │'),
+            call(self.loc.format(6, 1) + '│            │'),
+            call(self.loc.format(7, 1) + '│            │'),
+            call(self.loc.format(8, 1) + '│            │'),
+            call(self.loc.format(9, 1) + '└────────────┘'),
+        ]
+
+    # Drawing tests.
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_draw_frame(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.draw_frame should draw the frame
+        around the page.
+        """
+        # Expected value.
+        exp = self.frame
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        viewer.draw_frame()
+        act = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp, act)
+
+
 class PageTestCase(ut.TestCase):
     topleft = '\x1b[1;2H'
     bold = '\x1b[1m'
@@ -497,3 +553,45 @@ class PagerTestCase(ut.TestCase):
 
         # Determine test result.
         self.assertTupleEqual(exp, act)
+
+    def test_page_count(self):
+        """When called, Pager.page_count should return the number of
+        pages in the text at the current height and width.
+        """
+        # Expected value.
+        exp = 3
+
+        # Test data and state.
+        text = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+        height = len(text[0])
+        width = len(text[0][0]) + 1
+        lines = []
+        for page in text:
+            lines.extend(page)
+        text = ' '.join(lines)
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.page_count
+
+        # Determine test result.
+        self.assertEqual(exp, act)

@@ -106,19 +106,53 @@ class Pager:
     @property
     def pages(self) -> tuple[tuple[str, ...], ...]:
         """The paged text."""
-        return self._flow()
+        if '_pages' not in self.__dict__:
+            self._pages = self._pagenate()
+        return self._pages
 
     @property
     def page_count(self) -> int:
+        """The number of pages in the paged text."""
         return len(self.pages)
 
-    def _flow(self) -> tuple[tuple[str, ...], ...]:
+    def _pagenate(self) -> tuple[tuple[str, ...], ...]:
+        """Paginate the text."""
         wrapped = wrap(self.text, self.width)
         pages = []
         for i in range(0, len(wrapped), self.height):
             page = wrapped[i: i + self.height]
             pages.append(tuple(page))
         return tuple(pages)
+
+
+class Viewer:
+    """Manage the terminal."""
+    def __init__(self, term: Terminal = Terminal()) -> None:
+        self.term = term
+        self.frame = Box('light')
+
+    def draw_frame(self) -> None:
+        """Draw the frame around the page."""
+        top = (
+            self.frame.ltop
+            + self.frame.top * (self.term.width - 2)
+            + self.frame.rtop
+        )
+        mid = (
+            self.frame.mver
+            + ' ' * (self.term.width - 2)
+            + self.frame.mver
+        )
+        bot = (
+            self.frame.lbot
+            + self.frame.bot * (self.term.width - 2)
+            + self.frame.rbot
+        )
+
+        print(self.term.move(0, 0) + top)
+        for y in range(1, self.term.height):
+            print(self.term.move(y, 0) + mid)
+        print(self.term.move(self.term.height, 0) + bot)
 
 
 # Terminal controller.
