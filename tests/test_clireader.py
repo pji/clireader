@@ -24,8 +24,10 @@ class ViewerTestCase(ut.TestCase):
         self.height = 8
         self.width = 14
         self.text = 'Eggs.'
-        self.tittle = 'spam'
+        self.title = 'spam'
         self.frame_type = 'light'
+        self.page_num = 1
+        self.count_pages = 10
 
         # Common expected values.
         self.frame = [
@@ -38,6 +40,13 @@ class ViewerTestCase(ut.TestCase):
             call(self.loc.format(7, 1) + '│            │'),
             call(self.loc.format(8, 1) + '│            │'),
             call(self.loc.format(9, 1) + '└────────────┘'),
+        ]
+        self.status = [
+            call(self.loc.format(1, 2) + '┤spam├'),
+            call(
+                self.loc.format(1, 8)
+                + f'┤{self.page_num}/{self.count_pages}├'
+            )
         ]
 
     # Drawing tests.
@@ -63,6 +72,40 @@ class ViewerTestCase(ut.TestCase):
 
         # Run test and gather actuals.
         viewer.draw_frame()
+        act = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_draw_frame(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.draw_status should draw the status on
+        the top frame of the page.
+        """
+        # Expected value.
+        exp = self.status
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        page_num = self.page_num
+        count_pages = self.count_pages
+        title = self.title
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        viewer.draw_status(
+            title=title,
+            page_num=page_num,
+            count_pages=count_pages,
+        )
         act = mock_print.mock_calls
 
         # Determine test results.

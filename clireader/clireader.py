@@ -154,6 +154,23 @@ class Viewer:
             print(self.term.move(y, 0) + mid)
         print(self.term.move(self.term.height, 0) + bot)
 
+    def draw_status(
+        self,
+        title: str = '',
+        page_num: int = 0,
+        count_pages: int = 0,
+        frame_type: str = 'light'
+    ) -> None:
+        """Draw the status on top of the page."""
+        frame = Box(frame_type)
+        field_tmp = frame.rside + '{}' + frame.lside
+        if title:
+            print(self.term.move(0, 1) + field_tmp.format(title))
+        if page_num:
+            field = field_tmp.format(f'{page_num}/{count_pages}')
+            x = self.term.width - len(field) - 1
+            print(self.term.move(0, x) + field)
+
 
 # Terminal controller.
 class Page:
