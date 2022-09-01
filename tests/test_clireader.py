@@ -25,6 +25,7 @@ class ViewerTestCase(ut.TestCase):
         self.width = 14
         self.text = 'Eggs.'
         self.tittle = 'spam'
+        self.frame_type = 'light'
 
         # Common expected values.
         self.frame = [

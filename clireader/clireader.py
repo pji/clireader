@@ -129,24 +129,24 @@ class Viewer:
     """Manage the terminal."""
     def __init__(self, term: Terminal = Terminal()) -> None:
         self.term = term
-        self.frame = Box('light')
 
-    def draw_frame(self) -> None:
+    def draw_frame(self, frame_type: str = 'light') -> None:
         """Draw the frame around the page."""
+        frame = Box(frame_type)
         top = (
-            self.frame.ltop
-            + self.frame.top * (self.term.width - 2)
-            + self.frame.rtop
+            frame.ltop
+            + frame.top * (self.term.width - 2)
+            + frame.rtop
         )
         mid = (
-            self.frame.mver
+            frame.mver
             + ' ' * (self.term.width - 2)
-            + self.frame.mver
+            + frame.mver
         )
         bot = (
-            self.frame.lbot
-            + self.frame.bot * (self.term.width - 2)
-            + self.frame.rbot
+            frame.lbot
+            + frame.bot * (self.term.width - 2)
+            + frame.rbot
         )
 
         print(self.term.move(0, 0) + top)

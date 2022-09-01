@@ -102,7 +102,7 @@ It has the following public attributes:
 It has the following public methods:
 
 :draw_commands(cmds): Draw the available commands to the terminal.
-:draw_frame(box): Draw the app frame to the terminal.
+:draw_frame(frame_type): Draw the app frame to the terminal.
 :draw_status(title, page_num): Draw the status line to the terminal.
 :draw_page(text): Draw the given page to the terminal.
 :get_command(): Wait for a command from the user.
