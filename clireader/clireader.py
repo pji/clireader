@@ -6,7 +6,7 @@ A module for paging through text in the terminal.
 """
 from textwrap import wrap
 from time import sleep
-from typing import Generator, Optional
+from typing import Generator, Optional, Sequence
 
 from blessed import Terminal
 
@@ -153,6 +153,12 @@ class Viewer:
         for y in range(1, self.term.height):
             print(self.term.move(y, 0) + mid)
         print(self.term.move(self.term.height, 0) + bot)
+
+    def draw_page(self, text: Sequence[str]) -> None:
+        """Draw the text for the page."""
+        for i, line in enumerate(text):
+            y = i + 2
+            print(self.term.move(y, 2) + line)
 
     def draw_status(
         self,

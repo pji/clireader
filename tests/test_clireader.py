@@ -23,7 +23,9 @@ class ViewerTestCase(ut.TestCase):
         self.term = Terminal()
         self.height = 8
         self.width = 14
-        self.text = 'Eggs.'
+        self.text = (
+            'Eggs.',
+        )
         self.title = 'spam'
         self.frame_type = 'light'
         self.page_num = 1
@@ -40,6 +42,9 @@ class ViewerTestCase(ut.TestCase):
             call(self.loc.format(7, 1) + '│            │'),
             call(self.loc.format(8, 1) + '│            │'),
             call(self.loc.format(9, 1) + '└────────────┘'),
+        ]
+        self.page = [
+            call(self.loc.format(3, 3) + self.text[0]),
         ]
         self.status = [
             call(self.loc.format(1, 2) + '┤spam├'),
@@ -80,7 +85,7 @@ class ViewerTestCase(ut.TestCase):
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
     @patch('clireader.clireader.print')
-    def test_draw_frame(
+    def test_draw_status(
         self,
         mock_print,
         mock_height,
@@ -106,6 +111,34 @@ class ViewerTestCase(ut.TestCase):
             page_num=page_num,
             count_pages=count_pages,
         )
+        act = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_draw_page(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.draw_page should draw the page within the
+        frame in the terminal.
+        """
+        # Expected value.
+        exp = self.page
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        text = self.text
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        viewer.draw_page(text)
         act = mock_print.mock_calls
 
         # Determine test results.
