@@ -32,6 +32,13 @@ class ViewerTestCase(ut.TestCase):
         self.count_pages = 10
 
         # Common expected values.
+        self.clear = [
+            call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(4, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(5, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(6, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(7, 3) + ' ' * (self.width - 4)),
+        ]
         self.frame = [
             call(self.loc.format(1, 1) + '┌────────────┐'),
             call(self.loc.format(2, 1) + '│            │'),
@@ -54,7 +61,34 @@ class ViewerTestCase(ut.TestCase):
             )
         ]
 
-    # Drawing tests.
+    # Basic drawing tests.
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_clear(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.clear should clear the page area of the
+        terminal.
+        """
+        # Expected value.
+        exp = self.clear
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        viewer.clear()
+        act = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp, act)
+
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
     @patch('clireader.clireader.print')
@@ -77,6 +111,34 @@ class ViewerTestCase(ut.TestCase):
 
         # Run test and gather actuals.
         viewer.draw_frame()
+        act = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_draw_page(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.draw_page should draw the page within the
+        frame in the terminal.
+        """
+        # Expected value.
+        exp = self.page
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        text = self.text
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        viewer.draw_page(text)
         act = mock_print.mock_calls
 
         # Determine test results.
@@ -111,34 +173,6 @@ class ViewerTestCase(ut.TestCase):
             page_num=page_num,
             count_pages=count_pages,
         )
-        act = mock_print.mock_calls
-
-        # Determine test results.
-        self.assertListEqual(exp, act)
-
-    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
-    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
-    @patch('clireader.clireader.print')
-    def test_draw_page(
-        self,
-        mock_print,
-        mock_height,
-        mock_width
-    ):
-        """When called, Viewer.draw_page should draw the page within the
-        frame in the terminal.
-        """
-        # Expected value.
-        exp = self.page
-
-        # Test data and state.
-        mock_height.return_value = self.height
-        mock_width.return_value = self.width
-        text = self.text
-        viewer = clireader.Viewer()
-
-        # Run test and gather actuals.
-        viewer.draw_page(text)
         act = mock_print.mock_calls
 
         # Determine test results.

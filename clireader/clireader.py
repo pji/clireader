@@ -130,6 +130,12 @@ class Viewer:
     def __init__(self, term: Terminal = Terminal()) -> None:
         self.term = term
 
+    def clear(self) -> None:
+        """Clear the text area."""
+        line = ' ' * (self.term.width - 4)
+        for y in range(2, self.term.height - 1):
+            print(self.term.move(y, 2) + line)
+
     def draw_frame(self, frame_type: str = 'light') -> None:
         """Draw the frame around the page."""
         frame = Box(frame_type)
