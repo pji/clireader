@@ -4,6 +4,7 @@ clireader
 
 A module for paging through text in the terminal.
 """
+from re import sub
 from textwrap import wrap
 from time import sleep
 from typing import Generator, NamedTuple, Optional, Sequence
@@ -121,13 +122,54 @@ class Pager:
         """The number of pages in the paged text."""
         return len(self.pages)
 
+    def _remove_hard_wrapping(self, text: str) -> str:
+        """Remove any hard wrapping from a given string. Single
+        newlines are considered hard wrapping. Doubled newlines are
+        considered paragraph breaks.
+        """
+        # We only need to do work if there are newlines in the text.
+        if '\n' not in text:
+            return text
+
+        # Remove the single newlines.
+        pattern = r'\n(?!\n)'
+        nosingles = sub(pattern, ' ', text)
+
+        # Turn doubled newlines into single newlines.
+        pattern = r'\n '
+        return sub(pattern, '\n', nosingles)
+
     def _pagenate(self) -> tuple[tuple[str, ...], ...]:
         """Paginate the text."""
-        wrapped = wrap(self.text, self.width)
+        unwrapped = self._remove_hard_wrapping(self.text)
+        paragraphed = unwrapped.split('\n')
+        pwrapped = [wrap(p, self.width) for p in paragraphed]
+        wrapped = []
+        for paragraph in pwrapped:
+            wrapped.extend(paragraph)
+            wrapped.append('')
+
         pages = []
-        for i in range(0, len(wrapped), self.height):
-            page = wrapped[i: i + self.height]
-            pages.append(tuple(page))
+        page: list[str] = []
+        count = 0
+        for line in wrapped:
+            if count == self.height:
+                pages.append(tuple(page))
+                page = []
+                count = 0
+            if count == 0 and not line:
+                continue
+            page.append(line)
+            count += 1
+        else:
+            if page:
+                try:
+                    if not page[-1]:
+                        page = page[:-1]
+                except IndexError:
+                    pass
+                pages.append(tuple(page))
+
         return tuple(pages)
 
 

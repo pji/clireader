@@ -13,6 +13,262 @@ from blessed.keyboard import Keystroke
 from clireader import clireader
 
 
+class MainTestCase(ut.TestCase):
+    def setUp(self):
+        self.height = 8
+        self.width = 24
+        self.filename = 'tests/data/spam.txt'
+        self.title = self.filename.split('/')[-1]
+        with open(self.filename) as handle:
+            self.text = handle.read()
+        self.pager_init_calls = [
+            call()
+        ]
+
+
+class PagerTestCase(ut.TestCase):
+    def setUp(self):
+        self.attrs = {
+            'height': 20,
+            'pages': (),
+            'page_count': 0,
+            'text': '',
+            'title': '',
+            'width': 76,
+        }
+
+    # Initialization tests.
+    def test_init_defaults(self):
+        """When passed no values at initialization, the Pager object
+        should have the default attribute values.
+        """
+        # Expected value.
+        exp = self.attrs
+
+        # Run test and gather actuals.
+        pager = clireader.Pager()
+        act = {key: getattr(pager, key) for key in exp}
+
+        # Determine test results.
+        self.assertDictEqual(exp, act)
+
+    def test_init_set_attrs(self):
+        """When passed allowed parameters, the Pager object should
+        set those parameters as attributes.
+        """
+        # Expected value.
+        exp = self.attrs
+        exp['height'] = 10
+        exp['pages'] = (('spam',),)
+        exp['page_count'] = 1
+        exp['text'] = 'spam'
+        exp['title'] = 'eggs'
+        exp['width'] = 15
+
+        # Run test and gather actuals.
+        pager = clireader.Pager(
+            text=exp['text'],
+            title=exp['title'],
+            height=exp['height'],
+            width=exp['width'],
+        )
+        act = {key: getattr(pager, key) for key in exp}
+
+        # Determine test results.
+        self.assertDictEqual(exp, act)
+
+    # Pagination tests.
+    def test_page_count(self):
+        """When called, Pager.page_count should return the number of
+        pages in the text at the current height and width.
+        """
+        # Expected value.
+        exp = 3
+
+        # Test data and state.
+        text = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+        height = len(text[0])
+        width = len(text[0][0]) + 1
+        lines = []
+        for page in text:
+            lines.extend(page)
+        text = ' '.join(lines)
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.page_count
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    def test_pagination(self):
+        """When called, Pager.pages should return the text paginated
+        to the defined height and width for the object.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        lines = []
+        for page in exp:
+            lines.extend(page)
+        text = ' '.join(lines)
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
+    def test_pagination_with_newlines(self):
+        """When given text that contains single newline characters,
+        the newlines should be replaced with a space before the text
+        is wrapped.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        text = (
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789'
+        )
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
+    def test_pagination_with_doubled_newlines(self):
+        """When given text that contains single newline characters,
+        the newlines should be replaced with a space before the text
+        is wrapped.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        text = (
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789\n\n'
+        )
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
+
 class ViewerTestCase(ut.TestCase):
     topleft = '\x1b[1;2H'
     bold = '\x1b[1m'
@@ -231,139 +487,3 @@ class ViewerTestCase(ut.TestCase):
 
         # Run test and gather actual.
         act = viewer.get_key()
-
-
-class PagerTestCase(ut.TestCase):
-    def setUp(self):
-        self.attrs = {
-            'height': 20,
-            'pages': (),
-            'page_count': 0,
-            'text': '',
-            'title': '',
-            'width': 76,
-        }
-
-    # Initialization tests.
-    def test_init_defaults(self):
-        """When passed no values at initialization, the Pager object
-        should have the default attribute values.
-        """
-        # Expected value.
-        exp = self.attrs
-
-        # Run test and gather actuals.
-        pager = clireader.Pager()
-        act = {key: getattr(pager, key) for key in exp}
-
-        # Determine test results.
-        self.assertDictEqual(exp, act)
-
-    def test_init_set_attrs(self):
-        """When passed allowed parameters, the Pager object should
-        set those parameters as attributes.
-        """
-        # Expected value.
-        exp = self.attrs
-        exp['height'] = 10
-        exp['pages'] = (('spam',),)
-        exp['page_count'] = 1
-        exp['text'] = 'spam'
-        exp['title'] = 'eggs'
-        exp['width'] = 15
-
-        # Run test and gather actuals.
-        pager = clireader.Pager(
-            text=exp['text'],
-            title=exp['title'],
-            height=exp['height'],
-            width=exp['width'],
-        )
-        act = {key: getattr(pager, key) for key in exp}
-
-        # Determine test results.
-        self.assertDictEqual(exp, act)
-
-    # Pagination tests.
-    def test_pagination(self):
-        """When called, Pager.pages should return the text paginated
-        to the defined height and width for the object.
-        """
-        # Expected value.
-        exp = (
-            (
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-            ),
-            (
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-            ),
-            (
-                '1234 6789 1234',
-                '6789 1234 6789',
-            ),
-        )
-
-        # Test data and state.
-        height = len(exp[0])
-        width = len(exp[0][0]) + 1
-        lines = []
-        for page in exp:
-            lines.extend(page)
-        text = ' '.join(lines)
-        pager = clireader.Pager(text, height=height, width=width)
-
-        # Run test.
-        act = pager.pages
-
-        # Determine test result.
-        self.assertTupleEqual(exp, act)
-
-    def test_page_count(self):
-        """When called, Pager.page_count should return the number of
-        pages in the text at the current height and width.
-        """
-        # Expected value.
-        exp = 3
-
-        # Test data and state.
-        text = (
-            (
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-            ),
-            (
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-                '1234 6789 1234',
-                '6789 1234 6789',
-            ),
-            (
-                '1234 6789 1234',
-                '6789 1234 6789',
-            ),
-        )
-        height = len(text[0])
-        width = len(text[0][0]) + 1
-        lines = []
-        for page in text:
-            lines.extend(page)
-        text = ' '.join(lines)
-        pager = clireader.Pager(text, height=height, width=width)
-
-        # Run test.
-        act = pager.page_count
-
-        # Determine test result.
-        self.assertEqual(exp, act)
