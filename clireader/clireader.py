@@ -262,3 +262,36 @@ class Viewer:
         with self.term.cbreak():
             key = self.term.inkey()
         return str(key)
+
+
+# Basic command functions.
+def init_screen(
+    viewer: Viewer,
+    pager: Pager,
+    title: str,
+    commands: Sequence[Command]
+) -> None:
+    """Draw the frame, status, and command options."""
+    viewer.draw_frame()
+    viewer.draw_status(title, 1, pager.page_count)
+    viewer.draw_commands(commands)
+
+
+# The main loop.
+def main(filename: str) -> None:
+    title = filename.split('/')[-1]
+    with open(filename) as fh:
+        text = fh.read()
+    pager = Pager(text, title)
+    viewer = Viewer()
+    commands = [
+        Command('n', 'next'),
+        Command('x', 'exit'),
+    ]
+    init_screen(viewer, pager, title, commands)
+
+    with viewer.term.fullscreen(), viewer.term.hidden_cursor():
+        while True:
+            command = viewer.get_key().casefold()
+            if command == 'x':
+                break

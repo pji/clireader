@@ -118,7 +118,7 @@ available to the user. It has the following attributes:
 
 :pager: The `Pager` object for the currently displayed text.
 :viewer: The `Viewer` object for the terminal.
-:current_line: The first line being displayed.
+:current_page: The page being displayed.
 
 It has the following functions available:
 
@@ -144,4 +144,4 @@ way to do it that I've found.
 
 Rich Formatting and Word Wrapping
 ---------------------------------
-Does `wordwrap` already handle this?
+Does `wordwrap` already handle this? It does not.

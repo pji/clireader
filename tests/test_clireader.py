@@ -13,17 +13,80 @@ from blessed.keyboard import Keystroke
 from clireader import clireader
 
 
-class MainTestCase(ut.TestCase):
+# Base test class.
+class TerminalTestCase(ut.TestCase):
+    topleft = '\x1b[1;2H'
+    bold = '\x1b[1m'
+    rev = '\x1b[7m'
+    loc = '\x1b[{};{}H'
+
     def setUp(self):
         self.height = 8
         self.width = 24
+
+
+# Test classes.
+class MainTestCase(TerminalTestCase):
+    def setUp(self):
+        super().setUp()
         self.filename = 'tests/data/spam.txt'
         self.title = self.filename.split('/')[-1]
         with open(self.filename) as handle:
             self.text = handle.read()
-        self.pager_init_calls = [
-            call()
+        self.page_num = 1
+        self.count_pages = 3
+        self.command_list = (
+            clireader.Command('n', 'next'),
+            clireader.Command('x', 'exit'),
+        )
+        self.print_init_calls = [
+            call(self.loc.format(1, 1) + '┌──────────────────────┐'),
+            call(self.loc.format(2, 1) + '│                      │'),
+            call(self.loc.format(3, 1) + '│                      │'),
+            call(self.loc.format(4, 1) + '│                      │'),
+            call(self.loc.format(5, 1) + '│                      │'),
+            call(self.loc.format(6, 1) + '│                      │'),
+            call(self.loc.format(7, 1) + '│                      │'),
+            call(self.loc.format(8, 1) + '│                      │'),
+            call(self.loc.format(9, 1) + '└──────────────────────┘'),
+            call(self.loc.format(1, 2) + f'┤{self.title}├'),
+            call(
+                self.loc.format(1, 19)
+                + f'┤{self.page_num}/{self.count_pages}├'
+            ),
+            call(self.loc.format(self.height + 1, 2) + '┤Next├'),
+            call(self.loc.format(self.height + 1, 8) + '┤eXit├'),
         ]
+
+    @patch('blessed.Terminal.inkey')
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_open_document(
+        self,
+        mock_print,
+        mock_height,
+        mock_width,
+        mock_inkey
+    ):
+        """When called with a file name, open that file and display the
+        first page.
+        """
+        # Expected value.
+        exp = self.print_init_calls
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        mock_inkey.return_value = Keystroke('x')
+        filename = self.filename
+
+        # Run test and gather actuals.
+        loop = clireader.main(filename)
+        act = mock_print.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
 
 
 class PagerTestCase(ut.TestCase):
@@ -269,13 +332,10 @@ class PagerTestCase(ut.TestCase):
         self.assertTupleEqual(exp, act)
 
 
-class ViewerTestCase(ut.TestCase):
-    topleft = '\x1b[1;2H'
-    bold = '\x1b[1m'
-    rev = '\x1b[7m'
-    loc = '\x1b[{};{}H'
-
+class ViewerTestCase(TerminalTestCase):
     def setUp(self):
+        super().setUp()
+
         # Common test data.
         self.command_list = (
             clireader.Command('b', 'back'),
@@ -284,14 +344,12 @@ class ViewerTestCase(ut.TestCase):
         )
         self.count_pages = 10
         self.frame_type = 'light'
-        self.height = 8
         self.page_num = 1
         self.text = (
             'Eggs.',
         )
         self.term = Terminal()
         self.title = 'spam'
-        self.width = 24
 
         # Common expected values.
         self.clear = [
@@ -325,7 +383,7 @@ class ViewerTestCase(ut.TestCase):
             call(
                 self.loc.format(1, 18)
                 + f'┤{self.page_num}/{self.count_pages}├'
-            )
+            ),
         ]
 
     # Basic drawing tests.
