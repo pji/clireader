@@ -58,7 +58,7 @@ class MainTestCase(TerminalTestCase):
                 + f'┤{self.page_num}/{self.count_pages}├'
             ),
         ]
-        self.print_commands_calls = [
+        self.print_commands_calls_first = [
             call(self.loc.format(self.height + 1, 2) + '┤Next├'),
             call(self.loc.format(self.height + 1, 8) + '┤eXit├'),
         ]
@@ -74,10 +74,10 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(5, 3) + 'The last scene was'),
             call(self.loc.format(6, 3) + 'interesting from the'),
         ]
-        self.print_init_calls = [
+        self.print_calls_1 = [
             *self.print_frame_calls,
             *self.print_status_calls,
-            *self.print_commands_calls,
+            *self.print_commands_calls_first,
             *self.print_clear_calls,
             *self.print_page_calls_1,
         ]
@@ -86,23 +86,22 @@ class MainTestCase(TerminalTestCase):
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
     @patch('clireader.clireader.print')
-    def test_open_document(
+    def main_test(
         self,
+        exp,
+        user_input,
         mock_print,
         mock_height,
         mock_width,
         mock_inkey
     ):
-        """When called with a file name, open that file and display the
-        first page.
-        """
         # Expected value.
-        exp = self.print_init_calls
+        exp = exp
 
         # Test data and state.
         mock_height.return_value = self.height
         mock_width.return_value = self.width
-        mock_inkey.return_value = Keystroke('x')
+        mock_inkey.side_effect = user_input
         filename = self.filename
 
         # Run test and gather actuals.
@@ -111,6 +110,16 @@ class MainTestCase(TerminalTestCase):
 
         # Determine test result.
         self.assertListEqual(exp, act)
+
+    def test_open_document(self):
+        """When called with a file name, open that file and display the
+        first page.
+        """
+        exp = self.print_calls_1
+        user_input = [
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
 
 
 class PagerTestCase(ut.TestCase):
