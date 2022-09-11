@@ -179,11 +179,22 @@ class Viewer:
     def __init__(self, term: Terminal = Terminal()) -> None:
         self.term = term
 
+    # Properties.
+    @property
+    def page_height(self) -> int:
+        """The displayable height of a page."""
+        return self.term.height - 4
+
+    @property
+    def page_width(self) -> int:
+        """The displayable width of a page."""
+        return self.term.width - 4
+
     # Screen output methods.
     def clear(self) -> None:
         """Clear the text area."""
-        line = ' ' * (self.term.width - 4)
-        for y in range(2, self.term.height - 1):
+        line = ' ' * (self.page_width)
+        for y in range(2, self.term.height - 2):
             print(self.term.move(y, 2) + line)
 
     def draw_frame(self, frame_type: str = 'light') -> None:
@@ -265,30 +276,57 @@ class Viewer:
 
 
 # Basic command functions.
-def init_screen(
+def jump_to_page(
     viewer: Viewer,
     pager: Pager,
-    title: str,
-    commands: Sequence[Command]
+    commands: Sequence[Command],
+    page: int
 ) -> None:
-    """Draw the frame, status, and command options."""
+    """Jump to a given page in the document."""
+    # Update frame.
     viewer.draw_frame()
-    viewer.draw_status(title, 1, pager.page_count)
+    viewer.draw_status(
+        pager.title,
+        page + 1,
+        pager.page_count
+    )
     viewer.draw_commands(commands)
+
+    # Update page.
+    viewer.clear()
+    viewer.draw_page(pager.pages[page])
+
+
+def load_document(filename: str, height: int, width: int) -> Pager:
+    """Load a document from a file."""
+    text = read_file(filename)
+    title = filename.split('/')[-1]
+    return Pager(text, title, height, width)
+
+
+# Utility functions
+def build_commands() -> Sequence[Command]:
+    """Return the available commands."""
+    commands = []
+    commands.append(Command('n', 'next'))
+    commands.append(Command('x', 'exit'))
+    return commands
+
+
+def read_file(filename: str) -> str:
+    """Read the contents of a file."""
+    with open(filename) as fh:
+        text = fh.read()
+    return text
 
 
 # The main loop.
 def main(filename: str) -> None:
-    title = filename.split('/')[-1]
-    with open(filename) as fh:
-        text = fh.read()
-    pager = Pager(text, title)
+    current_page = 0
     viewer = Viewer()
-    commands = [
-        Command('n', 'next'),
-        Command('x', 'exit'),
-    ]
-    init_screen(viewer, pager, title, commands)
+    pager = load_document(filename, viewer.page_height, viewer.page_width)
+    commands = build_commands()
+    jump_to_page(viewer, pager, commands, current_page)
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         while True:

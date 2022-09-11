@@ -34,12 +34,13 @@ class MainTestCase(TerminalTestCase):
         with open(self.filename) as handle:
             self.text = handle.read()
         self.page_num = 1
-        self.count_pages = 3
+        self.count_pages = 39
         self.command_list = (
             clireader.Command('n', 'next'),
             clireader.Command('x', 'exit'),
         )
-        self.print_init_calls = [
+
+        self.print_frame_calls = [
             call(self.loc.format(1, 1) + '┌──────────────────────┐'),
             call(self.loc.format(2, 1) + '│                      │'),
             call(self.loc.format(3, 1) + '│                      │'),
@@ -49,13 +50,36 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(7, 1) + '│                      │'),
             call(self.loc.format(8, 1) + '│                      │'),
             call(self.loc.format(9, 1) + '└──────────────────────┘'),
+        ]
+        self.print_status_calls = [
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(
-                self.loc.format(1, 19)
+                self.loc.format(1, 18)
                 + f'┤{self.page_num}/{self.count_pages}├'
             ),
+        ]
+        self.print_commands_calls = [
             call(self.loc.format(self.height + 1, 2) + '┤Next├'),
             call(self.loc.format(self.height + 1, 8) + '┤eXit├'),
+        ]
+        self.print_clear_calls = [
+            call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(4, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(5, 3) + ' ' * (self.width - 4)),
+            call(self.loc.format(6, 3) + ' ' * (self.width - 4)),
+        ]
+        self.print_page_calls_1 = [
+            call(self.loc.format(3, 3) + 'Good evening.'),
+            call(self.loc.format(4, 3) + ''),
+            call(self.loc.format(5, 3) + 'The last scene was'),
+            call(self.loc.format(6, 3) + 'interesting from the'),
+        ]
+        self.print_init_calls = [
+            *self.print_frame_calls,
+            *self.print_status_calls,
+            *self.print_commands_calls,
+            *self.print_clear_calls,
+            *self.print_page_calls_1,
         ]
 
     @patch('blessed.Terminal.inkey')
@@ -357,7 +381,6 @@ class ViewerTestCase(TerminalTestCase):
             call(self.loc.format(4, 3) + ' ' * (self.width - 4)),
             call(self.loc.format(5, 3) + ' ' * (self.width - 4)),
             call(self.loc.format(6, 3) + ' ' * (self.width - 4)),
-            call(self.loc.format(7, 3) + ' ' * (self.width - 4)),
         ]
         self.commands = [
             call(self.loc.format(self.height + 1, 2) + '┤Back├'),
