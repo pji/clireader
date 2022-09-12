@@ -36,6 +36,7 @@ class MainTestCase(TerminalTestCase):
         self.page_num = 1
         self.count_pages = 39
         self.command_list = (
+            clireader.Command('j', 'jump'),
             clireader.Command('n', 'next'),
             clireader.Command('x', 'exit'),
         )
@@ -62,14 +63,20 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(self.loc.format(1, 18) + f'┤2/{self.count_pages}├'),
         ]
+        self.print_status_calls_3 = [
+            call(self.loc.format(1, 2) + f'┤{self.title}├'),
+            call(self.loc.format(1, 18) + f'┤3/{self.count_pages}├'),
+        ]
         self.print_commands_calls_first = [
-            call(self.loc.format(self.height + 1, 2) + '┤Next├'),
-            call(self.loc.format(self.height + 1, 8) + '┤eXit├'),
+            call(self.loc.format(self.height + 1, 2) + '┤Jump├'),
+            call(self.loc.format(self.height + 1, 8) + '┤Next├'),
+            call(self.loc.format(self.height + 1, 14) + '┤eXit├'),
         ]
         self.print_commands_calls_middle = [
             call(self.loc.format(self.height + 1, 2) + '┤Back├'),
-            call(self.loc.format(self.height + 1, 8) + '┤Next├'),
-            call(self.loc.format(self.height + 1, 14) + '┤eXit├'),
+            call(self.loc.format(self.height + 1, 8) + '┤Jump├'),
+            call(self.loc.format(self.height + 1, 14) + '┤Next├'),
+            call(self.loc.format(self.height + 1, 20) + '┤eXit├'),
         ]
         self.print_clear_calls = [
             call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
@@ -89,6 +96,12 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(5, 3) + 'logician because it'),
             call(self.loc.format(6, 3) + 'contained a number'),
         ]
+        self.print_page_calls_3 = [
+            call(self.loc.format(3, 3) + 'of logical'),
+            call(self.loc.format(4, 3) + 'fallacies; that is,'),
+            call(self.loc.format(5, 3) + 'invalid'),
+            call(self.loc.format(6, 3) + 'propositional'),
+        ]
         self.print_calls_1 = [
             *self.print_frame_calls,
             *self.print_status_calls_1,
@@ -102,6 +115,13 @@ class MainTestCase(TerminalTestCase):
             *self.print_commands_calls_middle,
             *self.print_clear_calls,
             *self.print_page_calls_2,
+        ]
+        self.print_calls_3 = [
+            *self.print_frame_calls,
+            *self.print_status_calls_3,
+            *self.print_commands_calls_middle,
+            *self.print_clear_calls,
+            *self.print_page_calls_3,
         ]
 
     @patch('blessed.Terminal.inkey')
@@ -134,6 +154,53 @@ class MainTestCase(TerminalTestCase):
         self.assertListEqual(exp, act)
 
     # Tests.
+    def test_back_page(self):
+        """When called, retreat to the previous page of the document."""
+        exp = [
+            *self.print_calls_1,
+            *self.print_calls_2,
+            *self.print_calls_1,
+        ]
+        user_input = [
+            Keystroke('n'),
+            Keystroke('b'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
+
+    def test_jump_to_page(self):
+        """When called with a file name, retreat to the previous page of
+        the document.
+        """
+        exp = [
+            *self.print_calls_1,
+            self.print_frame_calls[-1],
+            call(
+                self.loc.format(9, 3)
+                + '┤Jump to page > '
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            call(
+                self.loc.format(9, 19)
+                + '3'
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            *self.print_calls_3,
+        ]
+        user_input = [
+            Keystroke('j'),
+            Keystroke('3'),
+            Keystroke('\n'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
+
     def test_open_document(self):
         """When called with a file name, open that file and display the
         first page.
@@ -145,31 +212,13 @@ class MainTestCase(TerminalTestCase):
         self.main_test(exp, user_input)
 
     def test_next_page(self):
-        """When called with a file name, advance to the next page of
-        the document.
-        """
+        """When called, advance to the next page of the document."""
         exp = [
             *self.print_calls_1,
             *self.print_calls_2,
         ]
         user_input = [
             Keystroke('n'),
-            Keystroke('x'),
-        ]
-        self.main_test(exp, user_input)
-
-    def test_back_page(self):
-        """When called with a file name, retreat to the previous page of
-        the document.
-        """
-        exp = [
-            *self.print_calls_1,
-            *self.print_calls_2,
-            *self.print_calls_1,
-        ]
-        user_input = [
-            Keystroke('n'),
-            Keystroke('b'),
             Keystroke('x'),
         ]
         self.main_test(exp, user_input)
@@ -584,6 +633,47 @@ class ViewerTestCase(TerminalTestCase):
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
     @patch('clireader.clireader.print')
+    def test_draw_prompt(
+        self,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called with a string, Viewer.draw_prompt should draw
+        the string as a prompt at the bottom of the terminal window.
+        It should then return the location of the cursor for text entry.
+        """
+        # Expected value.
+        exp_print_calls = [
+            self.frame[-1],
+            call(
+                self.loc.format(9, 3)
+                + '┤spam > '
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+        ]
+        exp_loc = (8, 10)
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        prompt = 'spam'
+        viewer = clireader.Viewer()
+
+        # Run test and gather actuals.
+        act_loc = viewer.draw_prompt(prompt)
+        act_print_calls = mock_print.mock_calls
+
+        # Determine test results.
+        self.assertListEqual(exp_print_calls, act_print_calls)
+        self.assertTupleEqual(exp_loc, act_loc)
+
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
     def test_draw_status(
         self,
         mock_print,
@@ -630,3 +720,102 @@ class ViewerTestCase(TerminalTestCase):
 
         # Run test and gather actual.
         act = viewer.get_key()
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    @patch('blessed.Terminal.inkey')
+    def test_get_str(self, mock_inkey):
+        """When called, Viewer.get_str should wait for a sequence of
+        key presses from the user, ending with a newline. The method
+        should then return the key presses as a string.
+        """
+        # Expected value.
+        exp = 'spam'
+
+        # Test data and state.
+        keys = [Keystroke(char) for char in exp]
+        mock_inkey.side_effect = [*keys, Keystroke('\n')]
+        viewer = clireader.Viewer()
+
+        # Run test and gather actual.
+        act = viewer.get_str()
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    @patch('blessed.Terminal.inkey')
+    def test_get_str_with_prompt(
+        self,
+        mock_inkey,
+        mock_print,
+        mock_height,
+        mock_width
+    ):
+        """When called, Viewer.get_str should wait for a sequence of
+        key presses from the user, ending with a newline. The method
+        should then return the key presses as a string.
+        """
+        # Expected value.
+        exp = 'spam'
+        exp_print_calls = [
+            self.frame[-1],
+            call(
+                self.loc.format(9, 3)
+                + '┤spam > '
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            call(
+                self.loc.format(9, 11)
+                + 's'
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            call(
+                self.loc.format(9, 12)
+                + 'p'
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            call(
+                self.loc.format(9, 13)
+                + 'a'
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+            call(
+                self.loc.format(9, 14)
+                + 'm'
+                + self.rev
+                + ' '
+                + self.rev
+                + '├'
+            ),
+        ]
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        keys = [Keystroke(char) for char in exp]
+        mock_inkey.side_effect = [*keys, Keystroke('\n')]
+        viewer = clireader.Viewer()
+
+        # Run test and gather actual.
+        act = viewer.get_str('spam')
+        act_print_calls = mock_print.mock_calls
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+        self.assertListEqual(exp_print_calls, act_print_calls)

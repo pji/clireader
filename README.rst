@@ -11,9 +11,15 @@ The following items are still to-do before the initial release of the
 package:
 
 *   Remove next command when at the last page of the document.
-*   Allow invocation with arguments.
 *   Implement the jump command.
+    *   x Create ability to input multiple characters.
+    *   x Create ability to prompt for input.
+    *   x Create ability to show the prompt for input.
+    *   x Create ability to echo input to screen.
+    *   Have the jump command prompt for input.
+    *   Have the jump command jump to the page.
 *   Implement the load command.
+*   Allow invocation with arguments.
 
 The following are nice to have features for future releases:
 

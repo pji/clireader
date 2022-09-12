@@ -10,6 +10,7 @@ from time import sleep
 from typing import Generator, NamedTuple, Optional, Sequence
 
 from blessed import Terminal
+from blessed.keyboard import Keystroke
 
 
 # Utility classes.
@@ -250,6 +251,32 @@ class Viewer:
             y = i + 2
             print(self.term.move(y, 2) + line)
 
+    def draw_prompt(
+        self,
+        prompt: str = '',
+        frame_type: str = 'light'
+    ) -> tuple[int, int]:
+        """Draw an input prompt at the bottom of the terminal."""
+        frame = Box(frame_type)
+        y = self.term.height
+        x = len(prompt) + 6
+        field_tmp = (
+            frame.rside
+            + '{} > '
+            + self.term.reverse
+            + ' '
+            + self.term.reverse
+            + frame.lside
+        )
+        print(
+            self.term.move(y, 0)
+            + frame.lbot
+            + frame.bot * (self.term.width - 2)
+            + frame.rbot
+        )
+        print(self.term.move(y, 2) + field_tmp.format(prompt))
+        return y, x
+
     def draw_status(
         self,
         title: str = '',
@@ -274,15 +301,75 @@ class Viewer:
             key = self.term.inkey()
         return str(key)
 
+    def get_str(self, prompt: str = '', frame_type: str = 'light') -> str:
+        """Return a character sequence given by the user."""
+        keys = []
+        with self.term.cbreak():
+            if prompt:
+                frame = Box(frame_type)
+                y, x = self.draw_prompt(prompt, frame_type)
+            while (key := self.term.inkey()) != Keystroke('\n'):
+                keys.append(key)
+                if prompt:
+                    print(
+                        self.term.move(y, x)
+                        + str(key)
+                        + self.term.reverse
+                        + ' '
+                        + self.term.reverse
+                        + frame.lside
+                    )
+                    x += 1
+        return ''.join(str(k) for k in keys)
+
 
 # Basic command functions.
 def back_page(viewer: Viewer, pager: Pager, page: int) -> int:
     """Advance to the next page of the document."""
     page -= 1
-    return jump_to_page(viewer, pager, page)
+    return update_page(viewer, pager, page)
 
 
 def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
+    """Jump to a given page in the document."""
+    prompt = 'Jump to page'
+    page = int(viewer.get_str(prompt)) - 1
+    return update_page(viewer, pager, page)
+
+
+def load_document(filename: str, height: int, width: int) -> Pager:
+    """Load a document from a file."""
+    text = read_file(filename)
+    title = filename.split('/')[-1]
+    return Pager(text, title, height, width)
+
+
+def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
+    """Advance to the next page of the document."""
+    page += 1
+    return update_page(viewer, pager, page)
+
+
+# Utility functions
+def build_commands(page_count: int, page: int) -> Sequence[Command]:
+    """Return the available commands."""
+    commands = []
+    if page > 0:
+        commands.append(Command('b', 'back'))
+    commands.append(Command('j', 'jump'))
+    commands.append(Command('n', 'next'))
+    commands.append(Command('x', 'exit'))
+    return commands
+
+
+def read_file(filename: str) -> str:
+    """Read the contents of a file."""
+    with open(filename) as fh:
+        text = fh.read()
+    return text
+
+
+def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
     """Jump to a given page in the document."""
     # Build the command list.
     commands = build_commands(pager.page_count, page)
@@ -302,49 +389,20 @@ def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
     return page
 
 
-def load_document(filename: str, height: int, width: int) -> Pager:
-    """Load a document from a file."""
-    text = read_file(filename)
-    title = filename.split('/')[-1]
-    return Pager(text, title, height, width)
-
-
-def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
-    """Advance to the next page of the document."""
-    page += 1
-    return jump_to_page(viewer, pager, page)
-
-
-# Utility functions
-def build_commands(page_count: int, page: int) -> Sequence[Command]:
-    """Return the available commands."""
-    commands = []
-    if page > 0:
-        commands.append(Command('b', 'back'))
-    commands.append(Command('n', 'next'))
-    commands.append(Command('x', 'exit'))
-    return commands
-
-
-def read_file(filename: str) -> str:
-    """Read the contents of a file."""
-    with open(filename) as fh:
-        text = fh.read()
-    return text
-
-
 # The main loop.
 def main(filename: str) -> None:
     current_page = 0
     viewer = Viewer()
     pager = load_document(filename, viewer.page_height, viewer.page_width)
-    jump_to_page(viewer, pager, current_page)
+    update_page(viewer, pager, current_page)
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         while True:
             command = viewer.get_key().casefold()
             if command == 'b':
                 current_page = back_page(viewer, pager, current_page)
+            elif command == 'j':
+                current_page = jump_to_page(viewer, pager, current_page)
             elif command == 'n':
                 current_page = next_page(viewer, pager, current_page)
             elif command == 'x':
