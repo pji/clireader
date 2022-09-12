@@ -276,13 +276,17 @@ class Viewer:
 
 
 # Basic command functions.
-def jump_to_page(
-    viewer: Viewer,
-    pager: Pager,
-    commands: Sequence[Command],
-    page: int
-) -> None:
+def back_page(viewer: Viewer, pager: Pager, page: int) -> int:
+    """Advance to the next page of the document."""
+    page -= 1
+    return jump_to_page(viewer, pager, page)
+
+
+def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
     """Jump to a given page in the document."""
+    # Build the command list.
+    commands = build_commands(pager.page_count, page)
+
     # Update frame.
     viewer.draw_frame()
     viewer.draw_status(
@@ -295,6 +299,7 @@ def jump_to_page(
     # Update page.
     viewer.clear()
     viewer.draw_page(pager.pages[page])
+    return page
 
 
 def load_document(filename: str, height: int, width: int) -> Pager:
@@ -304,10 +309,18 @@ def load_document(filename: str, height: int, width: int) -> Pager:
     return Pager(text, title, height, width)
 
 
+def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
+    """Advance to the next page of the document."""
+    page += 1
+    return jump_to_page(viewer, pager, page)
+
+
 # Utility functions
-def build_commands() -> Sequence[Command]:
+def build_commands(page_count: int, page: int) -> Sequence[Command]:
     """Return the available commands."""
     commands = []
+    if page > 0:
+        commands.append(Command('b', 'back'))
     commands.append(Command('n', 'next'))
     commands.append(Command('x', 'exit'))
     return commands
@@ -325,11 +338,14 @@ def main(filename: str) -> None:
     current_page = 0
     viewer = Viewer()
     pager = load_document(filename, viewer.page_height, viewer.page_width)
-    commands = build_commands()
-    jump_to_page(viewer, pager, commands, current_page)
+    jump_to_page(viewer, pager, current_page)
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         while True:
             command = viewer.get_key().casefold()
-            if command == 'x':
+            if command == 'b':
+                current_page = back_page(viewer, pager, current_page)
+            elif command == 'n':
+                current_page = next_page(viewer, pager, current_page)
+            elif command == 'x':
                 break

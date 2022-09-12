@@ -51,16 +51,25 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(8, 1) + '│                      │'),
             call(self.loc.format(9, 1) + '└──────────────────────┘'),
         ]
-        self.print_status_calls = [
+        self.print_status_calls_1 = [
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(
                 self.loc.format(1, 18)
                 + f'┤{self.page_num}/{self.count_pages}├'
             ),
         ]
+        self.print_status_calls_2 = [
+            call(self.loc.format(1, 2) + f'┤{self.title}├'),
+            call(self.loc.format(1, 18) + f'┤2/{self.count_pages}├'),
+        ]
         self.print_commands_calls_first = [
             call(self.loc.format(self.height + 1, 2) + '┤Next├'),
             call(self.loc.format(self.height + 1, 8) + '┤eXit├'),
+        ]
+        self.print_commands_calls_middle = [
+            call(self.loc.format(self.height + 1, 2) + '┤Back├'),
+            call(self.loc.format(self.height + 1, 8) + '┤Next├'),
+            call(self.loc.format(self.height + 1, 14) + '┤eXit├'),
         ]
         self.print_clear_calls = [
             call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
@@ -74,12 +83,25 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(5, 3) + 'The last scene was'),
             call(self.loc.format(6, 3) + 'interesting from the'),
         ]
+        self.print_page_calls_2 = [
+            call(self.loc.format(3, 3) + 'point of view of a'),
+            call(self.loc.format(4, 3) + 'professional'),
+            call(self.loc.format(5, 3) + 'logician because it'),
+            call(self.loc.format(6, 3) + 'contained a number'),
+        ]
         self.print_calls_1 = [
             *self.print_frame_calls,
-            *self.print_status_calls,
+            *self.print_status_calls_1,
             *self.print_commands_calls_first,
             *self.print_clear_calls,
             *self.print_page_calls_1,
+        ]
+        self.print_calls_2 = [
+            *self.print_frame_calls,
+            *self.print_status_calls_2,
+            *self.print_commands_calls_middle,
+            *self.print_clear_calls,
+            *self.print_page_calls_2,
         ]
 
     @patch('blessed.Terminal.inkey')
@@ -111,12 +133,43 @@ class MainTestCase(TerminalTestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
+    # Tests.
     def test_open_document(self):
         """When called with a file name, open that file and display the
         first page.
         """
         exp = self.print_calls_1
         user_input = [
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
+
+    def test_next_page(self):
+        """When called with a file name, advance to the next page of
+        the document.
+        """
+        exp = [
+            *self.print_calls_1,
+            *self.print_calls_2,
+        ]
+        user_input = [
+            Keystroke('n'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
+
+    def test_back_page(self):
+        """When called with a file name, retreat to the previous page of
+        the document.
+        """
+        exp = [
+            *self.print_calls_1,
+            *self.print_calls_2,
+            *self.print_calls_1,
+        ]
+        user_input = [
+            Keystroke('n'),
+            Keystroke('b'),
             Keystroke('x'),
         ]
         self.main_test(exp, user_input)
