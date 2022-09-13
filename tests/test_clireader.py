@@ -79,6 +79,23 @@ class TerminalTestCase(ut.TestCase):
                 flush=True
             ),
         ]
+        self.print_commands_calls_last = [
+            call(
+                self.loc.format(self.height, 2) + '┤Back├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 8) + '┤Jump├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 14) + '┤eXit├',
+                end='',
+                flush=True
+            ),
+        ]
 
 
 # Test classes.
@@ -107,6 +124,10 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(self.loc.format(1, 18) + f'┤3/{self.count_pages}├'),
         ]
+        self.print_status_calls_39 = [
+            call(self.loc.format(1, 2) + f'┤{self.title}├'),
+            call(self.loc.format(1, 17) + f'┤39/{self.count_pages}├'),
+        ]
         self.print_clear_calls = [
             call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
             call(self.loc.format(4, 3) + ' ' * (self.width - 4)),
@@ -131,6 +152,9 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(5, 3) + 'invalid'),
             call(self.loc.format(6, 3) + 'propositional'),
         ]
+        self.print_page_calls_39 = [
+            call(self.loc.format(3, 3) + 'Goodnight.'),
+        ]
         self.print_calls_1 = [
             *self.print_frame_calls,
             *self.print_status_calls_1,
@@ -151,6 +175,13 @@ class MainTestCase(TerminalTestCase):
             *self.print_commands_calls_middle,
             *self.print_clear_calls,
             *self.print_page_calls_3,
+        ]
+        self.print_calls_39 = [
+            *self.print_frame_calls,
+            *self.print_status_calls_39,
+            *self.print_commands_calls_last,
+            *self.print_clear_calls,
+            *self.print_page_calls_39,
         ]
 
     @patch('blessed.Terminal.inkey')
@@ -182,7 +213,7 @@ class MainTestCase(TerminalTestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
-    # Tests.
+    # Basic command tests.
     def test_back_page(self):
         """When called, retreat to the previous page of the document."""
         exp = [
@@ -252,6 +283,55 @@ class MainTestCase(TerminalTestCase):
         ]
         user_input = [
             Keystroke('n'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input)
+
+    # Detail tests.
+    def test_last_page_should_not_have_a_next_option(self):
+        """When drawn, the last page of the document should not show
+        the next command.
+        """
+        exp = [
+            *self.print_calls_1,
+            self.print_frame_calls[-1],
+            call(
+                self.loc.format(8, 3)
+                + '┤Jump to page > '
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 19)
+                + '3'
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 20)
+                + '9'
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            *self.print_calls_39,
+        ]
+        user_input = [
+            Keystroke('j'),
+            Keystroke('3'),
+            Keystroke('9'),
+            Keystroke('\n'),
             Keystroke('x'),
         ]
         self.main_test(exp, user_input)

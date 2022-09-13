@@ -10,7 +10,7 @@ To-Do
 The following items are still to-do before the initial release of the
 package:
 
-*   Remove next command when at the last page of the document.
+*   x Remove next command when at the last page of the document.
 *   Implement the jump command.
     *   x Create ability to input multiple characters.
     *   x Create ability to prompt for input.

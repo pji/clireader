@@ -364,7 +364,8 @@ def build_commands(page_count: int, page: int) -> Sequence[Command]:
     if page > 0:
         commands.append(Command('b', 'back'))
     commands.append(Command('j', 'jump'))
-    commands.append(Command('n', 'next'))
+    if page < page_count - 1:
+        commands.append(Command('n', 'next'))
     commands.append(Command('x', 'exit'))
     return commands
 
