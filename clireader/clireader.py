@@ -93,13 +93,23 @@ class Box:
 
 
 class Command(NamedTuple):
+    """A command for interacting with the document being viewed."""
     key: str
     name: str
 
 
 # Text manager class.
 class Pager:
-    """Manage the text being displayed."""
+    """Manage the text being displayed.
+
+    :attr height: The height in rows of a page in the display.
+    :attr text: The raw text being paginated.
+    :attr title: The title of the document.
+    :attr width: The width in characters of a page in the display.
+    :prop pages: The paginated document. It is a tuple of tuples, where
+        each page is a tuple of the text lines that make up the page.
+    :prop page_count: The number of pages in the document.
+    """
     def __init__(
         self,
         text: str = '',
@@ -107,6 +117,15 @@ class Pager:
         height: int = 20,
         width: int = 76
     ) -> None:
+        """Initialize an instance of the class.
+
+        :param text: (Optional.) The raw text to paginate.
+        :param title: (Optional.) The title of the document.
+        :param height: (Optional.) The height of a page in the display.
+        :param width: (Optional.) The width of a page in the display.
+        :return: None.
+        :rtype: NoneType
+        """
         self.height = height
         self.width = width
         self.title = title
@@ -128,6 +147,10 @@ class Pager:
         """Remove any hard wrapping from a given string. Single
         newlines are considered hard wrapping. Doubled newlines are
         considered paragraph breaks.
+
+        :param text: The text to remove the wrapping from.
+        :return: The cleaned text.
+        :rtype: str
         """
         # We only need to do work if there are newlines in the text.
         if '\n' not in text:
@@ -150,7 +173,11 @@ class Pager:
         return result
 
     def _pagenate(self) -> tuple[tuple[str, ...], ...]:
-        """Paginate the text."""
+        """Paginate the text.
+
+        :return: The pagenated text.
+        :rtype: tuple
+        """
         unwrapped = self._remove_hard_wrapping(self.text)
         paragraphed = unwrapped.split('\n')
         pwrapped = []
@@ -194,8 +221,20 @@ class Pager:
 
 # Terminal controller class.
 class Viewer:
-    """Manage the terminal."""
+    """Manage the terminal.
+
+    :attr term: The terminal the text is being displayed in.
+    :prop page_height: The displayable height of the page in rows.
+    :prop page_width: The displayable width of the page in characters.
+    """
     def __init__(self, term: Terminal = Terminal()) -> None:
+        """Initialize an instance of the class.
+
+        :param term: (Optional.) The terminal the text is being
+            displayed in.
+        :return: None.
+        :rtype: NoneType
+        """
         self.term = term
 
     # Properties.
@@ -217,7 +256,14 @@ class Viewer:
             print(self.term.move(y, 2) + line)
 
     def draw_frame(self, frame_type: str = 'light') -> None:
-        """Draw the frame around the page."""
+        """Draw the frame around the page.
+
+        :param frame_type: (Optional.) The thickness of the frame. It
+            defaults to 'light'.
+        around the page.
+        :return: None.
+        :rtype: NoneType
+        """
         frame = Box(frame_type)
         top = (
             frame.ltop
@@ -245,7 +291,15 @@ class Viewer:
         commands: Sequence[Command],
         frame_type: str = 'light'
     ) -> None:
-        """Draw the command hints."""
+        """Draw the command hints.
+
+        :param commands: A sequence of the commands that should be
+            displayed in the terminal.
+        :param frame_type: (Optional.) The thickness of the frame. It
+            defaults to 'light'.
+        :return: None.
+        :rtype: NoneType
+        """
         for i, command in enumerate(commands):
             # Create the command hint.
             frame = Box(frame_type)
@@ -264,7 +318,13 @@ class Viewer:
             print(self.term.move(y, x) + hint, end='', flush=True)
 
     def draw_page(self, text: Sequence[str]) -> None:
-        """Draw the text for the page."""
+        """Draw the text for the page.
+
+        :param text: A sequence of text lines to display in the
+            terminal.
+        :return: None.
+        :rtype: NoneType
+        """
         for i, line in enumerate(text):
             y = i + 2
             print(self.term.move(y, 2) + line)
@@ -274,7 +334,15 @@ class Viewer:
         prompt: str = '',
         frame_type: str = 'light'
     ) -> tuple[int, int]:
-        """Draw an input prompt at the bottom of the terminal."""
+        """Draw an input prompt at the bottom of the terminal.
+
+        :param prompt: (Optional.) A prompt to explain the type of
+            input needed to the user.
+        :param frame_type: (Optional.) The thickness of the frame. It
+            defaults to 'light'.
+        :return: None.
+        :rtype: NoneType
+        """
         frame = Box(frame_type)
         y = self.term.height - 1
         x = len(prompt) + 6
@@ -304,28 +372,54 @@ class Viewer:
         self,
         title: str = '',
         page_num: int = 0,
-        count_pages: int = 0,
+        page_count: int = 0,
         frame_type: str = 'light'
     ) -> None:
-        """Draw the status on top of the page."""
+        """Draw the status on top of the page.
+
+        :param title: (Optional.) The title of the document being
+            viewed. It defaults to an empty string. If no title is
+            given, no title will be displayed.
+        :param page_num: (Optional.) The current number of the page
+            being viewed. It defaults to zero. If no number is given,
+            no page number will be displayed.
+        :param page_count: (Optional.) The total number of pages in
+            the documents. It defaults to zero.
+        :param frame_type: (Optional.) The thickness of the frame. It
+            defaults to 'light'.
+        :return: None.
+        :rtype: NoneType
+        """
         frame = Box(frame_type)
         field_tmp = frame.rside + '{}' + frame.lside
         if title:
             print(self.term.move(0, 1) + field_tmp.format(title))
         if page_num:
-            field = field_tmp.format(f'{page_num}/{count_pages}')
+            field = field_tmp.format(f'{page_num}/{page_count}')
             x = self.term.width - len(field) - 1
             print(self.term.move(0, x) + field)
 
     # User input methods.
     def get_key(self) -> str:
-        """Return the character for the next key pressed."""
+        """Return the character for the next key pressed.
+
+        :return: The key pressed as a string.
+        :rtype: str
+        """
         with self.term.cbreak():
             key = self.term.inkey()
         return str(key)
 
     def get_str(self, prompt: str = '', frame_type: str = 'light') -> str:
-        """Return a character sequence given by the user."""
+        """Return a character sequence given by the user.
+
+        :param prompt: (Optional.) A prompt to explain the type of
+            input needed to the user.
+        :param frame_type: (Optional.) The thickness of the frame. It
+            defaults to 'light'.
+        :return: None.
+        :rtype: NoneType
+        """
         keys = []
         with self.term.cbreak():
             if prompt:
@@ -350,27 +444,54 @@ class Viewer:
 
 # Basic command functions.
 def back_page(viewer: Viewer, pager: Pager, page: int) -> int:
-    """Advance to the next page of the document."""
+    """Advance to the next page of the document.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
     page -= 1
     return update_page(viewer, pager, page)
 
 
 def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
-    """Jump to a given page in the document."""
+    """Jump to a given page in the document.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
     prompt = 'Jump to page'
     page = int(viewer.get_str(prompt)) - 1
     return update_page(viewer, pager, page)
 
 
 def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
-    """Advance to the next page of the document."""
+    """Advance to the next page of the document.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
     page += 1
     return update_page(viewer, pager, page)
 
 
 # Utility functions
-def build_commands(page_count: int, page: int) -> Sequence[Command]:
-    """Return the available commands."""
+def build_commands(page_count: int, page: int) -> list[Command]:
+    """Return the available commands.
+
+    :param page_count: The number of pages in the document.
+    :param page: The current page being viewed.
+    :return: A list of the commands available for the given page.
+    :rtype: list
+    """
     commands = []
     if page > 0:
         commands.append(Command('b', 'back'))
@@ -382,7 +503,16 @@ def build_commands(page_count: int, page: int) -> Sequence[Command]:
 
 
 def load_document(filename: str, height: int, width: int) -> Pager:
-    """Load a document from a file."""
+    """Load a document from a file.
+
+    :param filename: The path to the file to load.
+    :param height: The height in rows of the page display area in the
+        terminal.
+    :param width: The width in columns of the page display area in the
+        terminal.
+    :return: A Pager containing the contents of the file.
+    :rtype: Pager
+    """
     # Validate file.
     path = Path(filename)
     if not path.exists():
@@ -399,14 +529,26 @@ def load_document(filename: str, height: int, width: int) -> Pager:
 
 
 def read_file(filename: str | Path) -> str:
-    """Read the contents of a file."""
+    """Read the contents of a file.
+
+    :param filename: The path to the file to read.
+    :return: The contents of the file as a string.
+    :rtype: str
+    """
     with open(filename) as fh:
         text = fh.read()
     return text
 
 
 def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
-    """Jump to a given page in the document."""
+    """Jump to a given page in the document.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
     # Build the command list.
     commands = build_commands(pager.page_count, page)
 
@@ -427,6 +569,12 @@ def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
 
 # The main loop.
 def main(filename: str) -> None:
+    """The main program loop for clireader.
+
+    :param filename: The path to the file to display.
+    :return: None.
+    :rtype: NoneType
+    """
     current_page = 0
     viewer = Viewer()
     pager = load_document(filename, viewer.page_height, viewer.page_width)
@@ -443,7 +591,3 @@ def main(filename: str) -> None:
                 current_page = next_page(viewer, pager, current_page)
             elif command == 'x':
                 break
-
-
-if __name__ == '__main__':
-    main('tests/data/spam.txt')
