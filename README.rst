@@ -16,8 +16,8 @@ package:
     *   x Create ability to prompt for input.
     *   x Create ability to show the prompt for input.
     *   x Create ability to echo input to screen.
-    *   Have the jump command prompt for input.
-    *   Have the jump command jump to the page.
+    *   x Have the jump command prompt for input.
+    *   x Have the jump command jump to the page.
 *   Implement the load command.
 *   Allow invocation with arguments.
 

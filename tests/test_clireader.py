@@ -17,12 +17,68 @@ from clireader import clireader
 class TerminalTestCase(ut.TestCase):
     topleft = '\x1b[1;2H'
     bold = '\x1b[1m'
+    nml = '\x1b(B\x1b[m'
     rev = '\x1b[7m'
     loc = '\x1b[{};{}H'
 
     def setUp(self):
         self.height = 8
         self.width = 24
+        self.command_list = [
+            clireader.Command('j', 'jump'),
+            clireader.Command('n', 'next'),
+            clireader.Command('x', 'exit'),
+        ]
+
+        self.print_frame_calls = [
+            call(self.loc.format(1, 1) + '┌──────────────────────┐', end=''),
+            call(self.loc.format(2, 1) + '│                      │', end=''),
+            call(self.loc.format(3, 1) + '│                      │', end=''),
+            call(self.loc.format(4, 1) + '│                      │', end=''),
+            call(self.loc.format(5, 1) + '│                      │', end=''),
+            call(self.loc.format(6, 1) + '│                      │', end=''),
+            call(self.loc.format(7, 1) + '│                      │', end=''),
+            call(self.loc.format(8, 1) + '└──────────────────────┘', end=''),
+        ]
+        self.print_commands_calls_first = [
+            call(
+                self.loc.format(self.height, 2) + '┤Jump├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 8) + '┤Next├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 14) + '┤eXit├',
+                end='',
+                flush=True
+            ),
+        ]
+        self.print_commands_calls_middle = [
+            call(
+                self.loc.format(self.height, 2) + '┤Back├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 8) + '┤Jump├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 14) + '┤Next├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 20) + '┤eXit├',
+                end='',
+                flush=True
+            ),
+        ]
 
 
 # Test classes.
@@ -35,23 +91,7 @@ class MainTestCase(TerminalTestCase):
             self.text = handle.read()
         self.page_num = 1
         self.count_pages = 39
-        self.command_list = (
-            clireader.Command('j', 'jump'),
-            clireader.Command('n', 'next'),
-            clireader.Command('x', 'exit'),
-        )
 
-        self.print_frame_calls = [
-            call(self.loc.format(1, 1) + '┌──────────────────────┐'),
-            call(self.loc.format(2, 1) + '│                      │'),
-            call(self.loc.format(3, 1) + '│                      │'),
-            call(self.loc.format(4, 1) + '│                      │'),
-            call(self.loc.format(5, 1) + '│                      │'),
-            call(self.loc.format(6, 1) + '│                      │'),
-            call(self.loc.format(7, 1) + '│                      │'),
-            call(self.loc.format(8, 1) + '│                      │'),
-            call(self.loc.format(9, 1) + '└──────────────────────┘'),
-        ]
         self.print_status_calls_1 = [
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(
@@ -66,17 +106,6 @@ class MainTestCase(TerminalTestCase):
         self.print_status_calls_3 = [
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(self.loc.format(1, 18) + f'┤3/{self.count_pages}├'),
-        ]
-        self.print_commands_calls_first = [
-            call(self.loc.format(self.height + 1, 2) + '┤Jump├'),
-            call(self.loc.format(self.height + 1, 8) + '┤Next├'),
-            call(self.loc.format(self.height + 1, 14) + '┤eXit├'),
-        ]
-        self.print_commands_calls_middle = [
-            call(self.loc.format(self.height + 1, 2) + '┤Back├'),
-            call(self.loc.format(self.height + 1, 8) + '┤Jump├'),
-            call(self.loc.format(self.height + 1, 14) + '┤Next├'),
-            call(self.loc.format(self.height + 1, 20) + '┤eXit├'),
         ]
         self.print_clear_calls = [
             call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
@@ -176,20 +205,24 @@ class MainTestCase(TerminalTestCase):
             *self.print_calls_1,
             self.print_frame_calls[-1],
             call(
-                self.loc.format(9, 3)
+                self.loc.format(8, 3)
                 + '┤Jump to page > '
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             call(
-                self.loc.format(9, 19)
+                self.loc.format(8, 19)
                 + '3'
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             *self.print_calls_3,
         ]
@@ -472,11 +505,6 @@ class ViewerTestCase(TerminalTestCase):
         super().setUp()
 
         # Common test data.
-        self.command_list = (
-            clireader.Command('b', 'back'),
-            clireader.Command('n', 'next'),
-            clireader.Command('x', 'exit'),
-        )
         self.count_pages = 10
         self.frame_type = 'light'
         self.page_num = 1
@@ -493,22 +521,7 @@ class ViewerTestCase(TerminalTestCase):
             call(self.loc.format(5, 3) + ' ' * (self.width - 4)),
             call(self.loc.format(6, 3) + ' ' * (self.width - 4)),
         ]
-        self.commands = [
-            call(self.loc.format(self.height + 1, 2) + '┤Back├'),
-            call(self.loc.format(self.height + 1, 8) + '┤Next├'),
-            call(self.loc.format(self.height + 1, 14) + '┤eXit├'),
-        ]
-        self.frame = [
-            call(self.loc.format(1, 1) + '┌──────────────────────┐'),
-            call(self.loc.format(2, 1) + '│                      │'),
-            call(self.loc.format(3, 1) + '│                      │'),
-            call(self.loc.format(4, 1) + '│                      │'),
-            call(self.loc.format(5, 1) + '│                      │'),
-            call(self.loc.format(6, 1) + '│                      │'),
-            call(self.loc.format(7, 1) + '│                      │'),
-            call(self.loc.format(8, 1) + '│                      │'),
-            call(self.loc.format(9, 1) + '└──────────────────────┘'),
-        ]
+        self.frame = self.print_frame_calls
         self.page = [
             call(self.loc.format(3, 3) + self.text[0]),
         ]
@@ -551,7 +564,7 @@ class ViewerTestCase(TerminalTestCase):
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
     @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
     @patch('clireader.clireader.print')
-    def test_draw_command(
+    def test_draw_commands(
         self,
         mock_print,
         mock_height,
@@ -561,7 +574,7 @@ class ViewerTestCase(TerminalTestCase):
         hints on the bottom of the frame.
         """
         # Expected value.
-        exp = self.commands
+        exp = self.print_commands_calls_first
 
         # Test data and state.
         mock_height.return_value = self.height
@@ -647,15 +660,17 @@ class ViewerTestCase(TerminalTestCase):
         exp_print_calls = [
             self.frame[-1],
             call(
-                self.loc.format(9, 3)
+                self.loc.format(8, 3)
                 + '┤spam > '
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
         ]
-        exp_loc = (8, 10)
+        exp_loc = (7, 10)
 
         # Test data and state.
         mock_height.return_value = self.height
@@ -764,44 +779,54 @@ class ViewerTestCase(TerminalTestCase):
         exp_print_calls = [
             self.frame[-1],
             call(
-                self.loc.format(9, 3)
+                self.loc.format(8, 3)
                 + '┤spam > '
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             call(
-                self.loc.format(9, 11)
+                self.loc.format(8, 11)
                 + 's'
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             call(
-                self.loc.format(9, 12)
+                self.loc.format(8, 12)
                 + 'p'
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             call(
-                self.loc.format(9, 13)
+                self.loc.format(8, 13)
                 + 'a'
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
             call(
-                self.loc.format(9, 14)
+                self.loc.format(8, 14)
                 + 'm'
                 + self.rev
                 + ' '
-                + self.rev
-                + '├'
+                + self.nml
+                + '├',
+                end='',
+                flush=True
             ),
         ]
 

@@ -217,10 +217,10 @@ class Viewer:
             + frame.rbot
         )
 
-        print(self.term.move(0, 0) + top)
-        for y in range(1, self.term.height):
-            print(self.term.move(y, 0) + mid)
-        print(self.term.move(self.term.height, 0) + bot)
+        print(self.term.move(0, 0) + top, end='')
+        for y in range(1, self.term.height - 1):
+            print(self.term.move(y, 0) + mid, end='')
+        print(self.term.move(self.term.height - 1, 0) + bot, end='')
 
     def draw_commands(
         self,
@@ -241,9 +241,9 @@ class Viewer:
             )
 
             # Print the command.
+            y = self.term.height - 1
             x = i * len(hint) + 1
-            y = self.term.height
-            print(self.term.move(y, x) + hint)
+            print(self.term.move(y, x) + hint, end='', flush=True)
 
     def draw_page(self, text: Sequence[str]) -> None:
         """Draw the text for the page."""
@@ -258,23 +258,28 @@ class Viewer:
     ) -> tuple[int, int]:
         """Draw an input prompt at the bottom of the terminal."""
         frame = Box(frame_type)
-        y = self.term.height
+        y = self.term.height - 1
         x = len(prompt) + 6
         field_tmp = (
             frame.rside
             + '{} > '
             + self.term.reverse
             + ' '
-            + self.term.reverse
+            + self.term.normal
             + frame.lside
         )
         print(
             self.term.move(y, 0)
             + frame.lbot
             + frame.bot * (self.term.width - 2)
-            + frame.rbot
+            + frame.rbot,
+            end=''
         )
-        print(self.term.move(y, 2) + field_tmp.format(prompt))
+        print(
+            self.term.move(y, 2) + field_tmp.format(prompt),
+            end='',
+            flush=True
+        )
         return y, x
 
     def draw_status(
@@ -316,8 +321,10 @@ class Viewer:
                         + str(key)
                         + self.term.reverse
                         + ' '
-                        + self.term.reverse
-                        + frame.lside
+                        + self.term.normal
+                        + frame.lside,
+                        end='',
+                        flush=True
                     )
                     x += 1
         return ''.join(str(k) for k in keys)
@@ -394,9 +401,9 @@ def main(filename: str) -> None:
     current_page = 0
     viewer = Viewer()
     pager = load_document(filename, viewer.page_height, viewer.page_width)
-    update_page(viewer, pager, current_page)
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
+        update_page(viewer, pager, current_page)
         while True:
             command = viewer.get_key().casefold()
             if command == 'b':
@@ -407,3 +414,7 @@ def main(filename: str) -> None:
                 current_page = next_page(viewer, pager, current_page)
             elif command == 'x':
                 break
+
+
+if __name__ == '__main__':
+    main('tests/data/spam.txt')
