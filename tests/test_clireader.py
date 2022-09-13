@@ -103,6 +103,8 @@ class MainTestCase(TerminalTestCase):
     def setUp(self):
         super().setUp()
         self.filename = 'tests/data/spam.txt'
+        self.filename_not_exist = 'tests/data/__spam.txt'
+        self.filename_is_dir = 'tests/'
         self.title = self.filename.split('/')[-1]
         with open(self.filename) as handle:
             self.text = handle.read()
@@ -335,6 +337,38 @@ class MainTestCase(TerminalTestCase):
             Keystroke('x'),
         ]
         self.main_test(exp, user_input)
+
+    def test_error_if_path_does_not_exist(self):
+        """If the path given doesn't exist, raise a FileDoesNotExist
+        exception.
+        """
+        # Expected value.
+        exp_ex = FileNotFoundError
+        exp_msg = f'File {self.filename_not_exist} does not exist.'
+
+        # Run test and determine result.
+        with self.assertRaisesRegex(exp_ex, exp_msg):
+            clireader.load_document(
+                self.filename_not_exist,
+                self.height,
+                self.width
+            )
+
+    def test_error_if_path_is_directory(self):
+        """If the path given is a directory, raise a IsADirectoryError
+        exception.
+        """
+        # Expected value.
+        exp_ex = IsADirectoryError
+        exp_msg = f'{self.filename_is_dir} is a directory.'
+
+        # Run test and determine result.
+        with self.assertRaisesRegex(exp_ex, exp_msg):
+            clireader.load_document(
+                self.filename_is_dir,
+                self.height,
+                self.width
+            )
 
 
 class PagerTestCase(ut.TestCase):

@@ -4,6 +4,7 @@ clireader
 
 A module for paging through text in the terminal.
 """
+from pathlib import Path
 from re import sub
 from textwrap import wrap
 from time import sleep
@@ -344,13 +345,6 @@ def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
     return update_page(viewer, pager, page)
 
 
-def load_document(filename: str, height: int, width: int) -> Pager:
-    """Load a document from a file."""
-    text = read_file(filename)
-    title = filename.split('/')[-1]
-    return Pager(text, title, height, width)
-
-
 def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
     """Advance to the next page of the document."""
     page += 1
@@ -370,7 +364,24 @@ def build_commands(page_count: int, page: int) -> Sequence[Command]:
     return commands
 
 
-def read_file(filename: str) -> str:
+def load_document(filename: str, height: int, width: int) -> Pager:
+    """Load a document from a file."""
+    # Validate file.
+    path = Path(filename)
+    if not path.exists():
+        msg = f'File {filename} does not exist.'
+        raise FileNotFoundError(msg)
+    if path.is_dir():
+        msg = f'{filename} is a directory.'
+        raise IsADirectoryError(msg)
+
+    # Open and return file.
+    text = read_file(path)
+    title = filename.split('/')[-1]
+    return Pager(text, title, height, width)
+
+
+def read_file(filename: str | Path) -> str:
     """Read the contents of a file."""
     with open(filename) as fh:
         text = fh.read()
