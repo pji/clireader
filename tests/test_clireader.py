@@ -506,6 +506,60 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
+    def test_pagination_with_bullets(self):
+        """When given text with lines that start with an asterisk
+        followed by whitespace, those lines should not be wrapped
+        as though they are a bulleted list.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '',
+                '* 1234 6789',
+                '* 6789 1234',
+            ),
+            (
+                '\t* 1234 6789',
+                '',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        text = (
+            '1234 6789 1234 '
+            '6789 1234 6789\n\n'
+            '* 1234 6789\n'
+            '* 6789 1234\n'
+            '\t* 1234 6789\n\n'
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789'
+        )
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
     def test_pagination_with_newlines(self):
         """When given text that contains single newline characters,
         the newlines should be replaced with a space before the text

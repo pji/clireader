@@ -5,7 +5,7 @@ clireader
 A module for paging through text in the terminal.
 """
 from pathlib import Path
-from re import sub
+from re import match, sub
 from textwrap import wrap
 from time import sleep
 from typing import Generator, NamedTuple, Optional, Sequence
@@ -133,19 +133,36 @@ class Pager:
         if '\n' not in text:
             return text
 
-        # Remove the single newlines.
-        pattern = r'\n(?!\n)'
-        nosingles = sub(pattern, ' ', text)
-
-        # Turn doubled newlines into single newlines.
-        pattern = r'\n '
-        return sub(pattern, '\n', nosingles)
+        # Because we are watching for bulleted lists, we have to go
+        # through the text line by line.
+        lines = text.split('\n')
+        result = ''
+        for line in lines:
+            if not line:
+                result = result.rstrip()
+                result += '\n'
+            elif match(r'^\s*[*]\s', line):
+                result += line
+                result += '\n'
+            else:
+                result += line
+                result += ' '
+        return result
 
     def _pagenate(self) -> tuple[tuple[str, ...], ...]:
         """Paginate the text."""
         unwrapped = self._remove_hard_wrapping(self.text)
         paragraphed = unwrapped.split('\n')
-        pwrapped = [wrap(p, self.width) for p in paragraphed]
+        pwrapped = []
+        blist = []
+        for p in paragraphed:
+            if match(r'^\s*[*]\s', p):
+                blist.append(p)
+            else:
+                if blist:
+                    pwrapped.append(blist)
+                    blist = []
+                pwrapped.append(wrap(p, width=self.width))
         wrapped = []
         for paragraph in pwrapped:
             wrapped.extend(paragraph)
