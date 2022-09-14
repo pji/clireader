@@ -142,6 +142,27 @@ have to run everything in a loop. Or, at least, that's the easiest
 way to do it that I've found.
 
 
+When to Rewrap Text
+-------------------
+Text files don't come with any certain indicators of when text should
+reflow for the size of the viewing area. This makes it difficult to know
+when newline characters indicate a hard-wrapped paragraph or visual
+formatting that shouldn't be reflowed. Any detection for this is likely
+to be complex and prone to errors.
+
+`clireader` should probably have a couple of modes for how it makes the
+decision to rewrap text. Some modes could include:
+
+*   No rewrapping. Long lines are just truncated.
+*   Only lines longer than the width of the viewer are wrapped.
+*   Reflow everything.
+*   Detect reflowable paragraphs and reflow them.
+
+Users should be able to switch between the modes when using the program
+to find the mode that works best for the document. That mode should be
+an attribute of the `Pager` object.
+
+
 Rich Formatting and Word Wrapping
 ---------------------------------
 Does `wordwrap` already handle this? It does not.

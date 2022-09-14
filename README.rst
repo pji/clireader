@@ -5,6 +5,11 @@ clireader
 A simple program for paging through text files from the command line.
 
 
+What does it do?
+================
+It allows you to page through text files in a terminal.
+
+
 To Run
 ======
 To open a document with clireader, use `pip` to install the package
@@ -17,12 +22,17 @@ Where `path/to/file` is the file path to the document you want to open.
 
 To-Do
 =====
-The main features for the initial release have been completed.
+The features still needed to complete for the initial release:
+
+*   x Implement no-wrap mode.
+*   Implement wrap only long lines mode.
+*   x Implement wrap only paragraphs mode.
+*   Allow users to pick a mode at invocation.
+*   Allow users to change modes durring runtime.
 
 The following are nice to have features for future releases:
 
 *   Manage the flowing of text with curses better.
-*   Don't rewrap lines that are shorter than the terminal width.
 *   Implement the load command.
 
 

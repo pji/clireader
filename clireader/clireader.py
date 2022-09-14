@@ -115,7 +115,8 @@ class Pager:
         text: str = '',
         title: str = '',
         height: int = 20,
-        width: int = 76
+        width: int = 76,
+        wrap_mode: str = 'detect'
     ) -> None:
         """Initialize an instance of the class.
 
@@ -128,6 +129,7 @@ class Pager:
         """
         self.height = height
         self.width = width
+        self.wrap_mode = wrap_mode
         self.title = title
         self.text = text
 
@@ -135,7 +137,7 @@ class Pager:
     def pages(self) -> tuple[tuple[str, ...], ...]:
         """The paged text."""
         if '_pages' not in self.__dict__:
-            self._pages = self._pagenate()
+            self._pages = self._paginate()
         return self._pages
 
     @property
@@ -143,6 +145,43 @@ class Pager:
         """The number of pages in the paged text."""
         return len(self.pages)
 
+    def _paginate(self) -> tuple[tuple[str, ...], ...]:
+        """Paginate the text.
+
+        :return: The pagenated text.
+        :rtype: tuple
+        """
+        # Flow the text based on the wrapping mode.
+        if self.wrap_mode == 'detect':
+            wrapped = self._detect()
+        elif self.wrap_mode == 'no_wrap':
+            wrapped = self._no_wrap()
+
+        # Paginate the text.
+        pages = []
+        page: list[str] = []
+        count = 0
+        for line in wrapped:
+            if count == self.height:
+                pages.append(tuple(page))
+                page = []
+                count = 0
+            if count == 0 and not line:
+                continue
+            page.append(line)
+            count += 1
+        else:
+            if page:
+                try:
+                    if not page[-1]:
+                        page = page[:-1]
+                except IndexError:
+                    pass
+                pages.append(tuple(page))
+
+        return tuple(pages)
+
+    # Utility methods.
     def _remove_hard_wrapping(self, text: str) -> str:
         """Remove any hard wrapping from a given string. Single
         newlines are considered hard wrapping. Doubled newlines are
@@ -172,12 +211,8 @@ class Pager:
                 result += ' '
         return result
 
-    def _pagenate(self) -> tuple[tuple[str, ...], ...]:
-        """Paginate the text.
-
-        :return: The pagenated text.
-        :rtype: tuple
-        """
+    # Wrap modes.
+    def _detect(self) -> tuple[str, ...]:
         unwrapped = self._remove_hard_wrapping(self.text)
         paragraphed = unwrapped.split('\n')
         pwrapped = []
@@ -194,29 +229,11 @@ class Pager:
         for paragraph in pwrapped:
             wrapped.extend(paragraph)
             wrapped.append('')
+        return tuple(wrapped)
 
-        pages = []
-        page: list[str] = []
-        count = 0
-        for line in wrapped:
-            if count == self.height:
-                pages.append(tuple(page))
-                page = []
-                count = 0
-            if count == 0 and not line:
-                continue
-            page.append(line)
-            count += 1
-        else:
-            if page:
-                try:
-                    if not page[-1]:
-                        page = page[:-1]
-                except IndexError:
-                    pass
-                pages.append(tuple(page))
-
-        return tuple(pages)
+    def _no_wrap(self) -> tuple[str, ...]:
+        wrapped = self.text.split('\n')
+        return tuple(wrapped)
 
 
 # Terminal controller class.

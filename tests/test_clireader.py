@@ -379,6 +379,7 @@ class PagerTestCase(ut.TestCase):
             'page_count': 0,
             'text': '',
             'title': '',
+            'wrap_mode': 'detect',
             'width': 76,
         }
 
@@ -465,7 +466,7 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertEqual(exp, act)
 
-    def test_pagination(self):
+    def test_detect_pagination(self):
         """When called, Pager.pages should return the text paginated
         to the defined height and width for the object.
         """
@@ -506,7 +507,7 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
-    def test_pagination_with_bullets(self):
+    def test_detect_pagination_with_bullets(self):
         """When given text with lines that start with an asterisk
         followed by whitespace, those lines should not be wrapped
         as though they are a bulleted list.
@@ -560,7 +561,7 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
-    def test_pagination_with_newlines(self):
+    def test_detect_pagination_with_newlines(self):
         """When given text that contains single newline characters,
         the newlines should be replaced with a space before the text
         is wrapped.
@@ -591,18 +592,18 @@ class PagerTestCase(ut.TestCase):
         height = len(exp[0])
         width = len(exp[0][0]) + 1
         text = (
-            '1234 6789 1234 '
-            '6789 1234 6789 '
-            '1234 6789 1234 '
-            '6789 1234 6789 '
-            '1234 6789 1234 '
-            '6789 1234 6789 '
-            '1234 6789 1234 '
-            '6789 1234 6789 '
-            '1234 6789 1234 '
-            '6789 1234 6789 '
-            '1234 6789 1234 '
-            '6789 1234 6789'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789'
         )
         pager = clireader.Pager(text, height=height, width=width)
 
@@ -612,7 +613,7 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
-    def test_pagination_with_doubled_newlines(self):
+    def test_detect_pagination_with_doubled_newlines(self):
         """When given text that contains single newline characters,
         the newlines should be replaced with a space before the text
         is wrapped.
@@ -660,6 +661,79 @@ class PagerTestCase(ut.TestCase):
             '6789 1234 6789\n\n'
         )
         pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
+    def test_no_wrap_pagination_with_newlines(self):
+        """When given text that contains single newline characters,
+        the newlines the lines should  not be reflowed.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789',
+                '1234',
+                '6789 1234',
+                '6789',
+                '1234 6789',
+            ),
+            (
+                '1234',
+                '6789 1234',
+                '6789',
+                '1234 6789',
+                '1234',
+            ),
+            (
+                '6789 1234',
+                '6789',
+                '1234 6789',
+                '1234',
+                '6789 1234',
+            ),
+            (
+                '6789',
+                '1234 6789',
+                '1234',
+                '6789 1234',
+                '6789',
+            ),
+            (
+                '1234 6789',
+                '1234',
+                '6789 1234',
+                '6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        wrap_mode = 'no_wrap'
+        text = (
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789\n'
+            '1234 6789\n1234\n'
+            '6789 1234\n6789'
+        )
+        pager = clireader.Pager(
+            text,
+            height=height,
+            width=width,
+            wrap_mode=wrap_mode
+        )
 
         # Run test.
         act = pager.pages
