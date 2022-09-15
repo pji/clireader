@@ -26,19 +26,69 @@ class ParseCliTestCase(ut.TestCase):
 
     # Tests.
     @patch('clireader.clireader.main')
-    def test_called_with_filename(self, mock_main):
+    def test_with_filename_arg(self, mock_main):
         """When given a filename as an option, parse_cli should load
         that file in the viewer.
         """
         # Expected value.
         exp = [
-            call(self.filename),
+            call(self.filename, wrap_mode='detect'),
         ]
 
         # Test data and state.
         sys.argv = [
             'python -m clireader',
             self.filename,
+        ]
+
+        # Run test and gather actuals.
+        main.parse_cli()
+        act = mock_main.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.main')
+    def test_with_filename_and_long_wrap_arg(self, mock_main):
+        """When given a filename and '-l' as an option, parse_cli
+        should load that file in the viewer only rewrapping the long
+        lines.
+        """
+        # Expected value.
+        exp = [
+            call(self.filename, wrap_mode='long'),
+        ]
+
+        # Test data and state.
+        sys.argv = [
+            'python -m clireader',
+            self.filename,
+            '-l',
+        ]
+
+        # Run test and gather actuals.
+        main.parse_cli()
+        act = mock_main.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.main')
+    def test_with_filename_and_no_wrap_arg(self, mock_main):
+        """When given a filename and '-n' as an option, parse_cli
+        should load that file in the viewer without rewrapping the
+        text.
+        """
+        # Expected value.
+        exp = [
+            call(self.filename, wrap_mode='no_wrap'),
+        ]
+
+        # Test data and state.
+        sys.argv = [
+            'python -m clireader',
+            self.filename,
+            '-n',
         ]
 
         # Run test and gather actuals.

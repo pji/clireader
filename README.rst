@@ -22,14 +22,6 @@ Where `path/to/file` is the file path to the document you want to open.
 
 To-Do
 =====
-The features still needed to complete for the initial release:
-
-*   x Implement no-wrap mode.
-*   Implement wrap only long lines mode.
-*   x Implement wrap only paragraphs mode.
-*   Allow users to pick a mode at invocation.
-*   Allow users to change modes durring runtime.
-
 The following are nice to have features for future releases:
 
 *   Manage the flowing of text with curses better.
@@ -49,8 +41,8 @@ root of the repository::
     precommit.py
 
 
-How do contribute?
-==================
+How do I contribute?
+====================
 At this time, this is code is really just me exploring and learning.
 I've made it available in case it helps anyone else, but I'm not really
 intending to turn this into anything other than a personal project.

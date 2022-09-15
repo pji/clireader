@@ -25,6 +25,7 @@ class TerminalTestCase(ut.TestCase):
         self.height = 8
         self.width = 24
         self.command_list = [
+            clireader.Command('f', 'flow'),
             clireader.Command('j', 'jump'),
             clireader.Command('n', 'next'),
             clireader.Command('x', 'exit'),
@@ -42,24 +43,7 @@ class TerminalTestCase(ut.TestCase):
         ]
         self.print_commands_calls_first = [
             call(
-                self.loc.format(self.height, 2) + '┤Jump├',
-                end='',
-                flush=True
-            ),
-            call(
-                self.loc.format(self.height, 8) + '┤Next├',
-                end='',
-                flush=True
-            ),
-            call(
-                self.loc.format(self.height, 14) + '┤eXit├',
-                end='',
-                flush=True
-            ),
-        ]
-        self.print_commands_calls_middle = [
-            call(
-                self.loc.format(self.height, 2) + '┤Back├',
+                self.loc.format(self.height, 2) + '┤Flow├',
                 end='',
                 flush=True
             ),
@@ -79,6 +63,33 @@ class TerminalTestCase(ut.TestCase):
                 flush=True
             ),
         ]
+        self.print_commands_calls_middle = [
+            call(
+                self.loc.format(self.height, 2) + '┤Back├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 8) + '┤Flow├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 14) + '┤Jump├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 20) + '┤Next├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 26) + '┤eXit├',
+                end='',
+                flush=True
+            ),
+        ]
         self.print_commands_calls_last = [
             call(
                 self.loc.format(self.height, 2) + '┤Back├',
@@ -86,12 +97,17 @@ class TerminalTestCase(ut.TestCase):
                 flush=True
             ),
             call(
-                self.loc.format(self.height, 8) + '┤Jump├',
+                self.loc.format(self.height, 8) + '┤Flow├',
                 end='',
                 flush=True
             ),
             call(
-                self.loc.format(self.height, 14) + '┤eXit├',
+                self.loc.format(self.height, 14) + '┤Jump├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(self.height, 20) + '┤eXit├',
                 end='',
                 flush=True
             ),
@@ -130,6 +146,10 @@ class MainTestCase(TerminalTestCase):
             call(self.loc.format(1, 2) + f'┤{self.title}├'),
             call(self.loc.format(1, 17) + f'┤39/{self.count_pages}├'),
         ]
+        self.print_status_calls_1_no_wrap = [
+            call(self.loc.format(1, 2) + f'┤{self.title}├'),
+            call(self.loc.format(1, 18) + f'┤1/12├'),
+        ]
         self.print_clear_calls = [
             call(self.loc.format(3, 3) + ' ' * (self.width - 4)),
             call(self.loc.format(4, 3) + ' ' * (self.width - 4)),
@@ -156,6 +176,12 @@ class MainTestCase(TerminalTestCase):
         ]
         self.print_page_calls_39 = [
             call(self.loc.format(3, 3) + 'Goodnight.'),
+        ]
+        self.print_page_calls_1_no_wrap = [
+            call(self.loc.format(3, 3) + 'Good evening.'),
+            call(self.loc.format(4, 3) + ''),
+            call(self.loc.format(5, 3) + 'The last scene was i'),
+            call(self.loc.format(6, 3) + 'logician because it'),
         ]
         self.print_calls_1 = [
             *self.print_frame_calls,
@@ -185,6 +211,13 @@ class MainTestCase(TerminalTestCase):
             *self.print_clear_calls,
             *self.print_page_calls_39,
         ]
+        self.print_calls_1_no_wrap = [
+            *self.print_frame_calls,
+            *self.print_status_calls_1_no_wrap,
+            *self.print_commands_calls_first,
+            *self.print_clear_calls,
+            *self.print_page_calls_1_no_wrap,
+        ]
 
     @patch('blessed.Terminal.inkey')
     @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
@@ -194,6 +227,7 @@ class MainTestCase(TerminalTestCase):
         self,
         exp,
         user_input,
+        main_kwargs,
         mock_print,
         mock_height,
         mock_width,
@@ -209,11 +243,36 @@ class MainTestCase(TerminalTestCase):
         filename = self.filename
 
         # Run test and gather actuals.
-        loop = clireader.main(filename)
+        loop = clireader.main(filename, **main_kwargs)
         act = mock_print.mock_calls
 
         # Determine test result.
         self.assertListEqual(exp, act)
+
+    # Initialization tests.
+    def test_open_document(self):
+        """When called with a file name, open that file and display the
+        first page.
+        """
+        exp = self.print_calls_1
+        user_input = [
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input, {})
+
+    def test_open_document_with_wrap_mode(self):
+        """When called with a file name and a wrap_mode, open that
+        file, paginate it with the given wrap modem and display the
+        first page.
+        """
+        exp = self.print_calls_1_no_wrap
+        user_input = [
+            Keystroke('x'),
+        ]
+        main_kwargs = {
+            'wrap_mode': 'no_wrap',
+        }
+        self.main_test(exp, user_input, main_kwargs)
 
     # Basic command tests.
     def test_back_page(self):
@@ -228,7 +287,36 @@ class MainTestCase(TerminalTestCase):
             Keystroke('b'),
             Keystroke('x'),
         ]
-        self.main_test(exp, user_input)
+        self.main_test(exp, user_input, {})
+
+    def test_flow(self):
+        """When called, prompt for a wrap mode. Then reflow the text
+        using the new wrap mode.
+        """
+        exp = [
+            *self.print_calls_1,
+            *self.print_frame_calls,
+            *self.print_status_calls_1,
+            call(
+                self.loc.format(8, 2) + '┤None├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 10) + '┤Detect├',
+                end='',
+                flush=True
+            ),
+            *self.print_clear_calls,
+            *self.print_page_calls_1,
+            *self.print_calls_1_no_wrap,
+        ]
+        user_input = [
+            Keystroke('f'),
+            Keystroke('n'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input, {})
 
     def test_jump_to_page(self):
         """When called with a file name, retreat to the previous page of
@@ -265,17 +353,7 @@ class MainTestCase(TerminalTestCase):
             Keystroke('\n'),
             Keystroke('x'),
         ]
-        self.main_test(exp, user_input)
-
-    def test_open_document(self):
-        """When called with a file name, open that file and display the
-        first page.
-        """
-        exp = self.print_calls_1
-        user_input = [
-            Keystroke('x'),
-        ]
-        self.main_test(exp, user_input)
+        self.main_test(exp, user_input, {})
 
     def test_next_page(self):
         """When called, advance to the next page of the document."""
@@ -287,7 +365,7 @@ class MainTestCase(TerminalTestCase):
             Keystroke('n'),
             Keystroke('x'),
         ]
-        self.main_test(exp, user_input)
+        self.main_test(exp, user_input, {})
 
     # Detail tests.
     def test_last_page_should_not_have_a_next_option(self):
@@ -336,7 +414,7 @@ class MainTestCase(TerminalTestCase):
             Keystroke('\n'),
             Keystroke('x'),
         ]
-        self.main_test(exp, user_input)
+        self.main_test(exp, user_input, {})
 
     def test_error_if_path_does_not_exist(self):
         """If the path given doesn't exist, raise a FileDoesNotExist
@@ -668,6 +746,103 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
+    def test_long_pagination(self):
+        """When called with the wrap mode set to long, Pager.pages
+        should return the text paginated to the defined height and
+        width for the object, with only the long lines wrapped.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        wrap_mode = 'long'
+        text = (
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789'
+        )
+        pager = clireader.Pager(text, height=height, width=width)
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
+    def test_no_wrap_pagination_with_long_line(self):
+        """When called with mode set to 'no_wrap', Pager.pages should
+        return the text paginated with any long lines truncated to the
+        width of the viewing area.
+        """
+        # Expected value.
+        exp = (
+            (
+                '1234 6789 1234',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = len(exp[0][0]) + 1
+        wrap_mode = 'no_wrap'
+        text = (
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789'
+        )
+        pager = clireader.Pager(
+            text,
+            height=height,
+            width=width,
+            wrap_mode=wrap_mode
+        )
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
     def test_no_wrap_pagination_with_newlines(self):
         """When given text that contains single newline characters,
         the newlines the lines should  not be reflowed.
@@ -740,6 +915,77 @@ class PagerTestCase(ut.TestCase):
 
         # Determine test result.
         self.assertTupleEqual(exp, act)
+
+    # Text reflow tests.
+    def test_reflow_text(self):
+        """Given a wrap_mode, Pager.reflow should reflow the text
+        with the new attributes.
+        """
+        # Expected value.
+        exp_before = (
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+            ),
+            (
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+            (
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+        exp_after = (
+            (
+                '1234 6789 1234',
+                '1234 6789 1234',
+                '6789 1234 6789',
+            ),
+        )
+        exp_wrap_mode = 'no_wrap'
+
+        # Test data and state.
+        height = len(exp_before[0])
+        width = len(exp_before[0][0]) + 1
+        wrap_mode_before = 'detect'
+        text = (
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789 '
+            '1234 6789 1234 '
+            '6789 1234 6789\n'
+            '1234 6789 1234\n'
+            '6789 1234 6789'
+        )
+        pager = clireader.Pager(
+            text,
+            height=height,
+            width=width,
+            wrap_mode=wrap_mode_before
+        )
+
+        # Run test and gather actuals.
+        act_before = pager.pages[:]
+        pager.reflow(exp_wrap_mode)
+        act_after = pager.pages[:]
+        act_wrap_mode = pager.wrap_mode
+
+        # Determine test result.
+        self.assertTupleEqual(exp_before, act_before)
+        self.assertTupleEqual(exp_after, act_after)
+        self.assertEqual(exp_wrap_mode, act_wrap_mode)
 
 
 class ViewerTestCase(TerminalTestCase):

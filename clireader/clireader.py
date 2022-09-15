@@ -5,7 +5,7 @@ clireader
 A module for paging through text in the terminal.
 """
 from pathlib import Path
-from re import match, sub
+from re import match
 from textwrap import wrap
 from time import sleep
 from typing import Generator, NamedTuple, Optional, Sequence
@@ -124,6 +124,7 @@ class Pager:
         :param title: (Optional.) The title of the document.
         :param height: (Optional.) The height of a page in the display.
         :param width: (Optional.) The width of a page in the display.
+        :param wrap_mode: (Optional.) How the text is wrapped.
         :return: None.
         :rtype: NoneType
         """
@@ -145,6 +146,18 @@ class Pager:
         """The number of pages in the paged text."""
         return len(self.pages)
 
+    # Public methods.
+    def reflow(self, wrap_mode: str) -> None:
+        """Reflow and repaginate the document.
+
+        :param wrap_mode: (Optional.) How the text is wrapped.
+        :return: None.
+        :rtype: NoneType
+        """
+        self.wrap_mode = wrap_mode
+        del self._pages
+
+    # Utility methods.
     def _paginate(self) -> tuple[tuple[str, ...], ...]:
         """Paginate the text.
 
@@ -154,6 +167,8 @@ class Pager:
         # Flow the text based on the wrapping mode.
         if self.wrap_mode == 'detect':
             wrapped = self._detect()
+        elif self.wrap_mode == 'long':
+            wrapped = self._long()
         elif self.wrap_mode == 'no_wrap':
             wrapped = self._no_wrap()
 
@@ -181,7 +196,6 @@ class Pager:
 
         return tuple(pages)
 
-    # Utility methods.
     def _remove_hard_wrapping(self, text: str) -> str:
         """Remove any hard wrapping from a given string. Single
         newlines are considered hard wrapping. Doubled newlines are
@@ -231,9 +245,21 @@ class Pager:
             wrapped.append('')
         return tuple(wrapped)
 
+    def _long(self) -> tuple[str, ...]:
+        split_ = self.text.split('\n')
+        wrapped = []
+        for line in split_:
+            if len(line) <= self.width:
+                wrapped.append(line)
+            else:
+                wline = wrap(line, self.width)
+                wrapped.extend(wline)
+        return tuple(wrapped)
+
     def _no_wrap(self) -> tuple[str, ...]:
         wrapped = self.text.split('\n')
-        return tuple(wrapped)
+        trunced = [line[0:self.width].rstrip() for line in wrapped]
+        return tuple(trunced)
 
 
 # Terminal controller class.
@@ -473,6 +499,36 @@ def back_page(viewer: Viewer, pager: Pager, page: int) -> int:
     return update_page(viewer, pager, page)
 
 
+def flow(viewer: Viewer, pager: Pager, page: int) -> int:
+    """Change how the text in the document is flowed.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
+    mode_list = [
+        Command('n', 'none'),
+        Command('d', 'detect'),
+    ]
+    viewer.draw_frame()
+    viewer.draw_status(
+        pager.title,
+        page + 1,
+        pager.page_count
+    )
+    viewer.draw_commands(mode_list)
+    viewer.clear()
+    viewer.draw_page(pager.pages[page])
+    key = viewer.get_key()
+    wrap_mode = 'detect'
+    if key == 'n':
+        wrap_mode = 'no_wrap'
+    pager.reflow(wrap_mode)
+    return update_page(viewer, pager, 0)
+
+
 def jump_to_page(viewer: Viewer, pager: Pager, page: int) -> int:
     """Jump to a given page in the document.
 
@@ -512,6 +568,7 @@ def build_commands(page_count: int, page: int) -> list[Command]:
     commands = []
     if page > 0:
         commands.append(Command('b', 'back'))
+    commands.append(Command('f', 'flow'))
     commands.append(Command('j', 'jump'))
     if page < page_count - 1:
         commands.append(Command('n', 'next'))
@@ -519,7 +576,12 @@ def build_commands(page_count: int, page: int) -> list[Command]:
     return commands
 
 
-def load_document(filename: str, height: int, width: int) -> Pager:
+def load_document(
+    filename: str,
+    height: int,
+    width: int,
+    wrap_mode: str = 'detect'
+) -> Pager:
     """Load a document from a file.
 
     :param filename: The path to the file to load.
@@ -527,6 +589,7 @@ def load_document(filename: str, height: int, width: int) -> Pager:
         terminal.
     :param width: The width in columns of the page display area in the
         terminal.
+    :param wrap_mode: Set how the Pager wraps the text.
     :return: A Pager containing the contents of the file.
     :rtype: Pager
     """
@@ -542,7 +605,7 @@ def load_document(filename: str, height: int, width: int) -> Pager:
     # Open and return file.
     text = read_file(path)
     title = filename.split('/')[-1]
-    return Pager(text, title, height, width)
+    return Pager(text, title, height, width, wrap_mode)
 
 
 def read_file(filename: str | Path) -> str:
@@ -585,7 +648,7 @@ def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
 
 
 # The main loop.
-def main(filename: str) -> None:
+def main(filename: str, wrap_mode: str = 'detect') -> None:
     """The main program loop for clireader.
 
     :param filename: The path to the file to display.
@@ -594,7 +657,12 @@ def main(filename: str) -> None:
     """
     current_page = 0
     viewer = Viewer()
-    pager = load_document(filename, viewer.page_height, viewer.page_width)
+    pager = load_document(
+        filename,
+        viewer.page_height,
+        viewer.page_width,
+        wrap_mode
+    )
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         update_page(viewer, pager, current_page)
@@ -602,6 +670,8 @@ def main(filename: str) -> None:
             command = viewer.get_key().casefold()
             if command == 'b':
                 current_page = back_page(viewer, pager, current_page)
+            elif command == 'f':
+                current_page = flow(viewer, pager, current_page)
             elif command == 'j':
                 current_page = jump_to_page(viewer, pager, current_page)
             elif command == 'n':

@@ -23,10 +23,25 @@ def parse_cli() -> None:
         action='store',
         type=str
     )
+    p.add_argument(
+        '-l', '--longwrap',
+        help='Only rewrap the long lines.',
+        action='store_true'
+    )
+    p.add_argument(
+        '-n', '--nowrap',
+        help='Do not rewrap the text.',
+        action='store_true'
+    )
 
     # Parse the arguments.
     args = p.parse_args()
-    clireader.main(args.filename)
+    wrap_mode = 'detect'
+    if args.nowrap:
+        wrap_mode = 'no_wrap'
+    if args.longwrap:
+        wrap_mode = 'long'
+    clireader.main(args.filename, wrap_mode=wrap_mode)
 
 
 if __name__ == '__main__':
