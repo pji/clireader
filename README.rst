@@ -25,6 +25,7 @@ To-Do
 The following are nice to have features for future releases:
 
 *   Manage the flowing of text with curses better.
+*   Allow removal of the side frames and padding.
 *   Implement the load command.
 
 
