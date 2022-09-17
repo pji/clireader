@@ -83,7 +83,7 @@ def check_requirements():
 
 
 def check_rst(file_paths, ignore):
-    """Remove trailing whitespace."""
+    """Run syntax checks on any ReStructured Text documents."""
     def action(files):
         results = []
         for file in files:
@@ -91,29 +91,22 @@ def check_rst(file_paths, ignore):
                 lines = fh.read()
             result = list(rstchecker.check_source(lines))
             if result:
-                results.append(file, *result)
+                for item in result:
+                    msg = f'{file}:{item["line_number"]} {item["message"]}'
+                    results.append(msg)
         return results
-
-    def result_handler(result):
-        if result:
-            for line in result:
-                print(' ' * 4 + line)
 
     title = 'Checking RSTs'
     file_ext = '.rst'
     run_check_on_files(title, action, file_paths, ignore,
-                       file_ext, result_handler)
+                       file_ext, write_report)
 
 
 def check_style(file_paths, ignore):
-    """Remove trailing whitespace."""
+    """Run style checks on the code."""
     def result_handler(result):
         if result.get_count():
-            for msg in result.result_messages:
-                lines = wrap(msg, 78)
-                print(' ' * 4 + lines[0])
-                for line in lines[1:]:
-                    print(' ' * 6 + line)
+            write_report(result.result_messages)
             result.result_messages = []
 
     class StyleReport(pcs.BaseReport):
@@ -243,6 +236,14 @@ def wrap_lines(lines, width, initial_indent, subsequent_indent):
         wrapped = wrap(line, **kwargs)
         out.extend(wrapped)
     return out
+
+
+def write_report(result):
+    if not result:
+        return None
+    wrapped = wrap_lines(result, 72, ' ' * 4, ' ' * 6)
+    for line in wrapped:
+        print(line)
 
 
 def main():

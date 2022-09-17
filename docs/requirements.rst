@@ -166,3 +166,24 @@ an attribute of the `Pager` object.
 Rich Formatting and Word Wrapping
 ---------------------------------
 Does `wordwrap` already handle this? It does not.
+
+
+The `man` Page Formatting
+-------------------------
+The `man` pages are formatted using `troff` macros. The specific macro
+set seems to depend on the flavor of \*nix:
+
+*   Linux: man
+*   BSD/macOS: mdoc
+
+The description of the macros have `man` pages for their definition:
+
+*   man: groff_man_
+*   mdoc: groff_mdoc_
+
+.. _groff_man: https://man7.org/linux/man-pages/man7/groff_man.7.html
+.. _groff_mdoc: https://linux.die.net/man/7/groff_mdoc
+
+Looking between the two, `man` seems a little simpler than `mdoc`. If
+nothing else, it has fewer macros to implement. So, I think I'll use
+that as the initial set to implement for clireader.
