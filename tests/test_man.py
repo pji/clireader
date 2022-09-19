@@ -18,6 +18,67 @@ class LexTestCase(ut.TestCase):
         # Determine test results.
         self.assertTupleEqual(exp, act)
 
+    def test_example(self):
+        """When encountering an example begin macro (.EX), the Lexer
+        should begin collecting the following lines into a token until
+        an example end macro (.EE) is encountered. Then return the
+        correct token.
+        """
+        exp = (man.Example('spam'),)
+        text = (
+            '.EX\n'
+            f'{exp[0].text}\n'
+            '.EE\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph(self):
+        """When encountering a paragraph macro (.P), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs bacon ham'),)
+        text = (
+            '.P\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_relative_indent_end(self):
+        """When encountering a relative indent start header macro (.RE)
+        and up to one parameter, the Lexer should return the correct
+        token.
+        """
+        exp = (man.RelativeIndentEnd('2'),)
+        text = f'.RE {exp[0].indent}'
+        self.lex_test(exp, text)
+
+    def test_relative_indent_end_without_param(self):
+        """When encountering a relative indent start header macro (.RE)
+        without a parameter, the Lexer should return the correct token.
+        """
+        exp = (man.RelativeIndentEnd('1'),)
+        text = f'.RE'
+        self.lex_test(exp, text)
+
+    def test_relative_indent_start(self):
+        """When encountering a relative indent start header macro (.RS)
+        without a parameter, the Lexer should return the correct token.
+        """
+        exp = (man.RelativeIndentStart('2'),)
+        text = f'.RS {exp[0].indent}'
+        self.lex_test(exp, text)
+
+    def test_relative_indent_start_without_param(self):
+        """When encountering a relative indent start header macro (.RS)
+        and up to one parameter, the Lexer should return the correct
+        token.
+        """
+        exp = (man.RelativeIndentStart('1'),)
+        text = f'.RS'
+        self.lex_test(exp, text)
+
     def test_section(self):
         """When encountering a section header macro (.SH) and one
         parameter, the Lexer should return the correct token.
