@@ -37,9 +37,35 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs bacon ham'),)
+        exp = (man.Paragraph('spam eggs\nbacon ham'),)
         text = (
             '.P\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph_lp(self):
+        """When encountering a paragraph macro (.LP), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs\nbacon ham'),)
+        text = (
+            '.LP\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph_pp(self):
+        """When encountering a paragraph macro (.PP), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs\nbacon ham'),)
+        text = (
+            '.PP\n'
             f'{exp[0].text[:9]}\n'
             f'{exp[0].text[10:]}'
         )
@@ -102,6 +128,21 @@ class LexTestCase(ut.TestCase):
         """
         exp = (man.Subheading('spam'),)
         text = f'.SS {exp[0].subheading_text}'
+        self.lex_test(exp, text)
+
+    def test_taged_paragraph(self):
+        """When encountering a tagged paragraph macro (.TP), the Lexer
+        should collect an optional parameter on the same line as the
+        indentation level, a parameter on the next line as a tag, and
+        the following lines as the paragraph. It should then return a
+        TaggedParagraph token.
+        """
+        exp = (man.TaggedParagraph('1\nspam\neggs bacon ham'),)
+        text = (
+            f'.TP {exp[0].indent}\n'
+            f'{exp[0].tag}\n'
+            f'{exp[0].text}'
+        )
         self.lex_test(exp, text)
 
     def test_title(self):

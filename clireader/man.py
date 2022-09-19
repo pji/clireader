@@ -44,6 +44,19 @@ class Subheading(Token):
 
 
 @dataclass
+class TaggedParagraph(Token):
+    _original_text: str
+
+    def __post_init__(self) -> None:
+        split = self._original_text.split('\n')
+        self.indent = '1'
+        if split[0]:
+            self.indent = split[0]
+        self.tag = split[1]
+        self.text = '\n'.join(split[2:])
+
+
+@dataclass
 class Title(Token):
     title: str
     section: str = ''
@@ -66,8 +79,8 @@ def lex(text: str) -> tuple[Token, ...]:
             if not buffer:
                 buffer = line
             else:
-                buffer = f'{buffer} {line}'
-        elif state is Paragraph:
+                buffer = f'{buffer}\n{line}'
+        elif state in [Paragraph, TaggedParagraph]:
             token = state(buffer)
             tokens.append(token)
             state = None
@@ -85,7 +98,11 @@ def lex(text: str) -> tuple[Token, ...]:
         elif line.startswith('.EX'):
             state = Example
 
-        elif line.startswith('.P'):
+        elif (
+            line.startswith('.P')
+            or line.startswith('.LP')
+            or line.startswith('.PP')
+        ):
             state = Paragraph
 
         elif line.startswith('.RE'):
@@ -120,11 +137,18 @@ def lex(text: str) -> tuple[Token, ...]:
             args = line.split(' ')
             token = Title(*args[1:])
 
+        elif line.startswith('.TP'):
+            args = line.rstrip().split(' ')
+            buffer = '1'
+            if len(args) > 1:
+                buffer = f'{args[1]}'
+            state = TaggedParagraph
+
         # Add the token to the lexed document.
         if token:
             tokens.append(token)
     else:
-        if state is Paragraph:
+        if state in [Paragraph, TaggedParagraph]:
             token = state(buffer)
             tokens.append(token)
             state = None
