@@ -53,7 +53,9 @@ class TaggedParagraph(Token):
         if split[0]:
             self.indent = split[0]
         self.tag = split[1]
-        self.text = '\n'.join(split[2:])
+        self.text = ''
+        if len(split) > 2:
+            self.text = '\n'.join(split[2:])
 
 
 @dataclass
@@ -74,7 +76,6 @@ def lex(text: str) -> tuple[Token, ...]:
     buffer = ''
     for line in lines:
         token = None
-
         if state and not line.startswith('.'):
             if not buffer:
                 buffer = line
@@ -84,11 +85,13 @@ def lex(text: str) -> tuple[Token, ...]:
             token = state(buffer)
             tokens.append(token)
             state = None
+            token = None
         elif state:
             args = [s for s in buffer.split(' ') if s]
             token = state(*args)
             tokens.append(token)
             state = None
+            token = None
 
         # Determine the relevant macro for the line and create
         # the token for that macro.
@@ -137,7 +140,10 @@ def lex(text: str) -> tuple[Token, ...]:
             args = line.split(' ')
             token = Title(*args[1:])
 
-        elif line.startswith('.TP'):
+        elif (
+            line.startswith('.TP')
+            or line.startswith('.TQ')
+        ):
             args = line.rstrip().split(' ')
             buffer = '1'
             if len(args) > 1:

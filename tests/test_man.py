@@ -130,7 +130,7 @@ class LexTestCase(ut.TestCase):
         text = f'.SS {exp[0].subheading_text}'
         self.lex_test(exp, text)
 
-    def test_taged_paragraph(self):
+    def test_tagged_paragraph(self):
         """When encountering a tagged paragraph macro (.TP), the Lexer
         should collect an optional parameter on the same line as the
         indentation level, a parameter on the next line as a tag, and
@@ -142,6 +142,26 @@ class LexTestCase(ut.TestCase):
             f'.TP {exp[0].indent}\n'
             f'{exp[0].tag}\n'
             f'{exp[0].text}'
+        )
+        self.lex_test(exp, text)
+
+    def test_tagged_paragraph_with_TQ(self):
+        """When encountering a tagged paragraph macro (.TQ), the Lexer
+        should collect an optional parameter on the same line as the
+        indentation level, a parameter on the next line as a tag, and
+        the following lines as the paragraph. It should then return a
+        TaggedParagraph token.
+        """
+        exp = (
+            man.TaggedParagraph('1\nbaked beans'),
+            man.TaggedParagraph('1\nspam\neggs bacon ham'),
+        )
+        text = (
+            f'.TP {exp[0].indent}\n'
+            f'baked beans\n'
+            f'.TQ\n'
+            f'{exp[1].tag}\n'
+            f'{exp[1].text}'
         )
         self.lex_test(exp, text)
 
