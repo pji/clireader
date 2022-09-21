@@ -4,23 +4,46 @@ man
 
 A parser for documents formatted with the man troff macros.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
 # Token classes.
 class Token:
     """A superclass for lexical tokens."""
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
 
 
 @dataclass
 class Example(Token):
-    text: str
+    text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
+
+
+@dataclass
+class IndentedParagraph(Token):
+    tag: str = ''
+    indent: str = '1'
+    text: str = ''
 
 
 @dataclass
 class Paragraph(Token):
-    text: str
+    text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
 
 
 @dataclass
@@ -35,27 +58,37 @@ class RelativeIndentStart(Token):
 
 @dataclass
 class Section(Token):
-    heading_text: str
+    heading_text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        self.heading_text = line.rstrip()
 
 
 @dataclass
 class Subheading(Token):
-    subheading_text: str
+    subheading_text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        self.subheading_text = line.rstrip()
 
 
 @dataclass
 class TaggedParagraph(Token):
-    _original_text: str
+    indent: str = '1'
+    tag: str = ''
+    text: str = ''
+    additional_tags: list[str] = field(default_factory=list)
 
-    def __post_init__(self) -> None:
-        split = self._original_text.split('\n')
-        self.indent = '1'
-        if split[0]:
-            self.indent = split[0]
-        self.tag = split[1]
-        self.text = ''
-        if len(split) > 2:
-            self.text = '\n'.join(split[2:])
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.tag:
+            self.tag = line.rstrip()
+        elif not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
 
 
 @dataclass
@@ -72,26 +105,17 @@ def lex(text: str) -> tuple[Token, ...]:
     """Lex the given document."""
     lines = text.split('\n')
     tokens: list[Token] = []
-    state: Optional[type] = None
+    state: Optional[Token] = None
     buffer = ''
     for line in lines:
-        token = None
+        # Handle multiline macros.
         if state and not line.startswith('.'):
-            if not buffer:
-                buffer = line
-            else:
-                buffer = f'{buffer}\n{line}'
-        elif state in [Paragraph, TaggedParagraph]:
-            token = state(buffer)
-            tokens.append(token)
-            state = None
-            token = None
+            state.process_line(line)
         elif state:
-            args = [s for s in buffer.split(' ') if s]
-            token = state(*args)
-            tokens.append(token)
+            tokens.append(state)
             state = None
-            token = None
+
+        token: Optional[Token] = None
 
         # Determine the relevant macro for the line and create
         # the token for that macro.
@@ -99,14 +123,14 @@ def lex(text: str) -> tuple[Token, ...]:
             token = None
 
         elif line.startswith('.EX'):
-            state = Example
+            state = Example()
 
         elif (
             line.startswith('.P')
             or line.startswith('.LP')
             or line.startswith('.PP')
         ):
-            state = Paragraph
+            state = Paragraph()
 
         elif line.startswith('.RE'):
             args = line.split(' ')
@@ -127,41 +151,36 @@ def lex(text: str) -> tuple[Token, ...]:
             if args[1:]:
                 token = Section(*args[1:])
             else:
-                state = Section
+                state = Section()
 
         elif line.startswith('.SS'):
             args = line.split(' ')
             if args[1:]:
                 token = Subheading(*args[1:])
             else:
-                state = Subheading
+                state = Subheading()
 
         elif line.startswith('.TH'):
             args = line.split(' ')
             token = Title(*args[1:])
 
+        # Refactor to hold the additional tags in the initial TP.
         elif (
             line.startswith('.TP')
             or line.startswith('.TQ')
         ):
             args = line.rstrip().split(' ')
-            buffer = '1'
             if len(args) > 1:
-                buffer = f'{args[1]}'
-            state = TaggedParagraph
+                state = TaggedParagraph(args[1])
+            else:
+                state = TaggedParagraph()
 
         # Add the token to the lexed document.
         if token:
             tokens.append(token)
     else:
-        if state in [Paragraph, TaggedParagraph]:
-            token = state(buffer)
-            tokens.append(token)
-            state = None
-        elif state:
-            args = [s for s in buffer.split(' ') if s]
-            token = state(*args)
-            tokens.append(token)
+        if state:
+            tokens.append(state)
             state = None
 
     return tuple(tokens)

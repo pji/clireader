@@ -24,11 +24,26 @@ class LexTestCase(ut.TestCase):
         an example end macro (.EE) is encountered. Then return the
         correct token.
         """
-        exp = (man.Example('spam'),)
+        exp = (man.Example('spam\neggs bacon\n'),)
         text = (
             '.EX\n'
-            f'{exp[0].text}\n'
+            f'{exp[0].text[:4]}\n'
+            f'{exp[0].text[5:]}\n'
             '.EE\n'
+        )
+        self.lex_test(exp, text)
+
+    @ut.skip
+    def test_indented_paragraph(self):
+        """When encountering an indented paragraph macro (.IP), the
+        Lexer should begin collecting the following lines into a token
+        then return a Paragraph token containing the collected text.
+        """
+        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham'),)
+        text = (
+            f'.IP {exp[0].tag} {exp[0].indent}\n'
+            f'{exp[0].text[:4]}\n'
+            f'{exp[0].text[5:]}'
         )
         self.lex_test(exp, text)
 
@@ -37,7 +52,7 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham'),)
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
         text = (
             '.P\n'
             f'{exp[0].text[:9]}\n'
@@ -50,7 +65,7 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham'),)
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
         text = (
             '.LP\n'
             f'{exp[0].text[:9]}\n'
@@ -63,7 +78,7 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham'),)
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
         text = (
             '.PP\n'
             f'{exp[0].text[:9]}\n'
@@ -137,7 +152,7 @@ class LexTestCase(ut.TestCase):
         the following lines as the paragraph. It should then return a
         TaggedParagraph token.
         """
-        exp = (man.TaggedParagraph('1\nspam\neggs bacon ham'),)
+        exp = (man.TaggedParagraph('1', 'spam', 'eggs bacon ham\n'),)
         text = (
             f'.TP {exp[0].indent}\n'
             f'{exp[0].tag}\n'
@@ -153,8 +168,8 @@ class LexTestCase(ut.TestCase):
         TaggedParagraph token.
         """
         exp = (
-            man.TaggedParagraph('1\nbaked beans'),
-            man.TaggedParagraph('1\nspam\neggs bacon ham'),
+            man.TaggedParagraph('1', 'baked beans'),
+            man.TaggedParagraph('1', 'spam', 'eggs bacon ham\n'),
         )
         text = (
             f'.TP {exp[0].indent}\n'
