@@ -33,6 +33,13 @@ class IndentedParagraph(Token):
     indent: str = '1'
     text: str = ''
 
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
+
 
 @dataclass
 class Paragraph(Token):
@@ -80,11 +87,15 @@ class TaggedParagraph(Token):
     tag: str = ''
     text: str = ''
     additional_tags: list[str] = field(default_factory=list)
+    _tag_flag: bool = False
 
     def process_line(self, line: str) -> None:
         """Process the next line of text."""
         if not self.tag:
             self.tag = line.rstrip()
+        elif self._tag_flag:
+            self.additional_tags.append(line.rstrip())
+            self._tag_flag = False
         elif not self.text:
             self.text = f'{line}\n'
         elif line:
@@ -111,6 +122,8 @@ def lex(text: str) -> tuple[Token, ...]:
         # Handle multiline macros.
         if state and not line.startswith('.'):
             state.process_line(line)
+        elif isinstance(state, TaggedParagraph) and line.startswith('.TQ'):
+            state._tag_flag = True
         elif state:
             tokens.append(state)
             state = None
@@ -124,6 +137,13 @@ def lex(text: str) -> tuple[Token, ...]:
 
         elif line.startswith('.EX'):
             state = Example()
+
+        elif line.startswith('.IP'):
+            args = line.rstrip().split(' ')
+            if len(args) > 1:
+                state = IndentedParagraph(*args[1:])
+            else:
+                state = IndentedParagraph()
 
         elif (
             line.startswith('.P')
@@ -164,11 +184,7 @@ def lex(text: str) -> tuple[Token, ...]:
             args = line.split(' ')
             token = Title(*args[1:])
 
-        # Refactor to hold the additional tags in the initial TP.
-        elif (
-            line.startswith('.TP')
-            or line.startswith('.TQ')
-        ):
+        elif line.startswith('.TP'):
             args = line.rstrip().split(' ')
             if len(args) > 1:
                 state = TaggedParagraph(args[1])

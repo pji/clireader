@@ -33,13 +33,12 @@ class LexTestCase(ut.TestCase):
         )
         self.lex_test(exp, text)
 
-    @ut.skip
     def test_indented_paragraph(self):
         """When encountering an indented paragraph macro (.IP), the
         Lexer should begin collecting the following lines into a token
         then return a Paragraph token containing the collected text.
         """
-        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham'),)
+        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham\n'),)
         text = (
             f'.IP {exp[0].tag} {exp[0].indent}\n'
             f'{exp[0].text[:4]}\n'
@@ -168,15 +167,19 @@ class LexTestCase(ut.TestCase):
         TaggedParagraph token.
         """
         exp = (
-            man.TaggedParagraph('1', 'baked beans'),
-            man.TaggedParagraph('1', 'spam', 'eggs bacon ham\n'),
+            man.TaggedParagraph(
+                '1',
+                'baked beans',
+                'eggs bacon ham\n',
+                ['spam',],
+            ),
         )
         text = (
             f'.TP {exp[0].indent}\n'
-            f'baked beans\n'
+            f'{exp[0].tag}\n'
             f'.TQ\n'
-            f'{exp[1].tag}\n'
-            f'{exp[1].text}'
+            f'{exp[0].additional_tags[0]}\n'
+            f'{exp[0].text}'
         )
         self.lex_test(exp, text)
 
