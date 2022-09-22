@@ -18,6 +18,7 @@ class LexTestCase(ut.TestCase):
         # Determine test results.
         self.assertTupleEqual(exp, act)
 
+    # Document structure macros.
     def test_example(self):
         """When encountering an example begin macro (.EX), the Lexer
         should begin collecting the following lines into a token until
@@ -30,58 +31,6 @@ class LexTestCase(ut.TestCase):
             f'{exp[0].text[:4]}\n'
             f'{exp[0].text[5:]}\n'
             '.EE\n'
-        )
-        self.lex_test(exp, text)
-
-    def test_indented_paragraph(self):
-        """When encountering an indented paragraph macro (.IP), the
-        Lexer should begin collecting the following lines into a token
-        then return a Paragraph token containing the collected text.
-        """
-        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham\n'),)
-        text = (
-            f'.IP {exp[0].tag} {exp[0].indent}\n'
-            f'{exp[0].text[:4]}\n'
-            f'{exp[0].text[5:]}'
-        )
-        self.lex_test(exp, text)
-
-    def test_paragraph(self):
-        """When encountering a paragraph macro (.P), the Lexer
-        should begin collecting the following lines into a token then
-        return a Paragraph token containing the collected text.
-        """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
-        text = (
-            '.P\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
-        )
-        self.lex_test(exp, text)
-
-    def test_paragraph_lp(self):
-        """When encountering a paragraph macro (.LP), the Lexer
-        should begin collecting the following lines into a token then
-        return a Paragraph token containing the collected text.
-        """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
-        text = (
-            '.LP\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
-        )
-        self.lex_test(exp, text)
-
-    def test_paragraph_pp(self):
-        """When encountering a paragraph macro (.PP), the Lexer
-        should begin collecting the following lines into a token then
-        return a Paragraph token containing the collected text.
-        """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
-        text = (
-            '.PP\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
         )
         self.lex_test(exp, text)
 
@@ -144,6 +93,75 @@ class LexTestCase(ut.TestCase):
         text = f'.SS {exp[0].subheading_text}'
         self.lex_test(exp, text)
 
+    def test_title(self):
+        """When encountering a title header macro (.TH) and up to
+        five parameters, the Lexer should return the correct token.
+        """
+        exp = (
+            man.Title('spam', '1', 'eggs', 'bacon', 'ham'),
+        )
+        text = (
+            f'.TH {exp[0].title}'
+            f' {exp[0].section}'
+            f' {exp[0].footer_middle}'
+            f' {exp[0].footer_inside}'
+            f' {exp[0].header_middle}'
+        )
+        self.lex_test(exp, text)
+
+    # Paragraph macros.
+    def test_indented_paragraph(self):
+        """When encountering an indented paragraph macro (.IP), the
+        Lexer should begin collecting the following lines into a token
+        then return a Paragraph token containing the collected text.
+        """
+        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham\n'),)
+        text = (
+            f'.IP {exp[0].tag} {exp[0].indent}\n'
+            f'{exp[0].text[:4]}\n'
+            f'{exp[0].text[5:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph(self):
+        """When encountering a paragraph macro (.P), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        text = (
+            '.P\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph_lp(self):
+        """When encountering a paragraph macro (.LP), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        text = (
+            '.LP\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph_pp(self):
+        """When encountering a paragraph macro (.PP), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        text = (
+            '.PP\n'
+            f'{exp[0].text[:9]}\n'
+            f'{exp[0].text[10:]}'
+        )
+        self.lex_test(exp, text)
+
     def test_tagged_paragraph(self):
         """When encountering a tagged paragraph macro (.TP), the Lexer
         should collect an optional parameter on the same line as the
@@ -183,18 +201,16 @@ class LexTestCase(ut.TestCase):
         )
         self.lex_test(exp, text)
 
-    def test_title(self):
-        """When encountering a title header macro (.TH) and up to
-        five parameters, the Lexer should return the correct token.
+    # Command synopsis macros.
+    def test_synopsis(self):
+        """When encountering a synopsis begin macro (.SY), the lexer
+        should begin collecting lines and tokens until it reaches a
+        synopsis end macro (.YS) macro. The lexer should then return
+        a Synopsis token containing the collected tokens.
         """
-        exp = (
-            man.Title('spam', '1', 'eggs', 'bacon', 'ham'),
-        )
+        exp = (man.Synopsis('spam'),)
         text = (
-            f'.TH {exp[0].title}'
-            f' {exp[0].section}'
-            f' {exp[0].footer_middle}'
-            f' {exp[0].footer_inside}'
-            f' {exp[0].header_middle}'
+            f'.SY {exp[0].command}\n'
+            '.YS'
         )
         self.lex_test(exp, text)

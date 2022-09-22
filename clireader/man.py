@@ -15,34 +15,9 @@ class Token:
         """Process the next line of text."""
 
 
+# Document structure tokens.
 @dataclass
 class Example(Token):
-    text: str = ''
-
-    def process_line(self, line: str) -> None:
-        """Process the next line of text."""
-        if not self.text:
-            self.text = f'{line}\n'
-        elif line:
-            self.text = f'{self.text}{line}\n'
-
-
-@dataclass
-class IndentedParagraph(Token):
-    tag: str = ''
-    indent: str = '1'
-    text: str = ''
-
-    def process_line(self, line: str) -> None:
-        """Process the next line of text."""
-        if not self.text:
-            self.text = f'{line}\n'
-        elif line:
-            self.text = f'{self.text}{line}\n'
-
-
-@dataclass
-class Paragraph(Token):
     text: str = ''
 
     def process_line(self, line: str) -> None:
@@ -82,6 +57,42 @@ class Subheading(Token):
 
 
 @dataclass
+class Title(Token):
+    title: str
+    section: str = ''
+    footer_middle: str = ''
+    footer_inside: str = ''
+    header_middle: str = ''
+
+
+# Paragraph tokens.
+@dataclass
+class IndentedParagraph(Token):
+    tag: str = ''
+    indent: str = '1'
+    text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
+
+
+@dataclass
+class Paragraph(Token):
+    text: str = ''
+
+    def process_line(self, line: str) -> None:
+        """Process the next line of text."""
+        if not self.text:
+            self.text = f'{line}\n'
+        elif line:
+            self.text = f'{self.text}{line}\n'
+
+
+@dataclass
 class TaggedParagraph(Token):
     indent: str = '1'
     tag: str = ''
@@ -102,13 +113,10 @@ class TaggedParagraph(Token):
             self.text = f'{self.text}{line}\n'
 
 
+# Command synopsis tokens.
 @dataclass
-class Title(Token):
-    title: str
-    section: str = ''
-    footer_middle: str = ''
-    footer_inside: str = ''
-    header_middle: str = ''
+class Synopsis(Token):
+    command: str
 
 
 # Lexer functions.
@@ -122,6 +130,9 @@ def lex(text: str) -> tuple[Token, ...]:
         # Handle multiline macros.
         if state and not line.startswith('.'):
             state.process_line(line)
+        elif isinstance(state, Synopsis) and line.startswith('.YS'):
+            tokens.append(state)
+            state = None
         elif isinstance(state, TaggedParagraph) and line.startswith('.TQ'):
             state._tag_flag = True
         elif state:
@@ -179,6 +190,10 @@ def lex(text: str) -> tuple[Token, ...]:
                 token = Subheading(*args[1:])
             else:
                 state = Subheading()
+
+        elif line.startswith('.SY'):
+            args = line.split(' ')
+            state = Synopsis(*args[1:])
 
         elif line.startswith('.TH'):
             args = line.split(' ')
