@@ -25,11 +25,14 @@ class LexTestCase(ut.TestCase):
         an example end macro (.EE) is encountered. Then return the
         correct token.
         """
-        exp = (man.Example('spam\neggs bacon\n'),)
+        exp = (man.Example([
+            man.Text('spam'),
+            man.Text('eggs bacon'),
+        ]),)
         text = (
             '.EX\n'
-            f'{exp[0].text[:4]}\n'
-            f'{exp[0].text[5:]}\n'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
             '.EE\n'
         )
         self.lex_test(exp, text)
@@ -115,11 +118,22 @@ class LexTestCase(ut.TestCase):
         Lexer should begin collecting the following lines into a token
         then return a Paragraph token containing the collected text.
         """
-        exp = (man.IndentedParagraph('spam', '1', 'eggs\nbacon ham\n'),)
+        exp = (
+            man.IndentedParagraph(
+                'spam',
+                '1',
+                [
+                    man.Text('eggs'),
+                    man.Text('bacon ham'),
+                    man.Bold('tomato'),
+                ],
+            ),
+        )
         text = (
             f'.IP {exp[0].tag} {exp[0].indent}\n'
-            f'{exp[0].text[:4]}\n'
-            f'{exp[0].text[5:]}'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
+            f'.B {exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -178,11 +192,23 @@ class LexTestCase(ut.TestCase):
         the following lines as the paragraph. It should then return a
         TaggedParagraph token.
         """
-        exp = (man.TaggedParagraph('1', 'spam', 'eggs bacon ham\n'),)
+        exp = (
+            man.TaggedParagraph(
+                '1',
+                'spam',
+                [
+                    man.Text('eggs bacon ham'),
+                    man.Text('baked beans'),
+                    man.Bold('tomato'),
+                ]
+            ),
+        )
         text = (
             f'.TP {exp[0].indent}\n'
             f'{exp[0].tag}\n'
-            f'{exp[0].text}'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
+            f'.B {exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -196,17 +222,24 @@ class LexTestCase(ut.TestCase):
         exp = (
             man.TaggedParagraph(
                 '1',
-                'baked beans',
-                'eggs bacon ham\n',
-                ['spam',],
+                'spam',
+                [
+                    man.AdditionalHeader('tomato'),
+                    man.AdditionalHeader('flapjacks'),
+                    man.Text('eggs bacon ham'),
+                    man.Text('baked beans'),
+                ]
             ),
         )
         text = (
             f'.TP {exp[0].indent}\n'
             f'{exp[0].tag}\n'
-            f'.TQ\n'
-            f'{exp[0].additional_tags[0]}\n'
-            f'{exp[0].text}'
+            '.TQ\n'
+            f'{exp[0].contents[0].value}\n'
+            '.TQ\n'
+            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[2].value}\n'
+            f'{exp[0].contents[3].value}\n'
         )
         self.lex_test(exp, text)
 
@@ -236,5 +269,82 @@ class LexTestCase(ut.TestCase):
             f'.OP {exp[0].contents[0].option_name} '
             f'{exp[0].contents[0].option_argument}\n'
             '.YS'
+        )
+        self.lex_test(exp, text)
+
+    # Hyperlink and email macros.
+    def test_email_address(self):
+        """When encountering an email address begin macro (.MT), the
+        lexer should collect the email address from the parameter and
+        the following lines as hypertext until it reaches an email
+        address end macro (.ME). It should then return an EmailAddress
+        token with the collected data.
+        """
+        exp = (man.EmailAddress(
+            'fred.foonly@fubar.net',
+            [man.Text('Fred Foonly'),],
+            '!'
+        ),)
+        text = (
+            f'.MT {exp[0].address}\n'
+            f'{exp[0].contents[0].value}\n'
+            f'.ME {exp[0].punctuation}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_url(self):
+        """When encountering a URL begin macro (.UR), the lexer should
+        collect the URL from the parameter and the following lines as
+        hypertext until it reaches an URL end macro (.UE). It should
+        then return a Url token with the collected data.
+        """
+        exp = (man.Url(
+            'https://www.gnu.org/software/groff',
+            [man.Text('groff'),],
+            '!'
+        ),)
+        text = (
+            f'.UR {exp[0].address}\n'
+            f'{exp[0].contents[0].value}\n'
+            f'.UE {exp[0].punctuation}\n'
+        )
+        self.lex_test(exp, text)
+
+    # Font style macros.
+    def test_bold(self):
+        """When encountering a bold macro (.B) while collecting lines
+        for a multiline macro, the lexer should create a Bold token
+        with the given text and add the token to the token for the
+        multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Bold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].value}\n'
+            f'.B {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].value}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_italics(self):
+        """When encountering an italics macro (.I) while collecting
+        lines for a multiline macro, the lexer should create a Italics
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Italics('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].value}\n'
+            f'.I {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].value}\n'
         )
         self.lex_test(exp, text)

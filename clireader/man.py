@@ -8,24 +8,46 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# Token classes.
+# Base token classe.
 class Token:
     """A superclass for lexical tokens."""
-    def process_line(self, line: str) -> None:
+    def process_next(self, line: str) -> bool:
         """Process the next line of text."""
+        return True
 
 
+# Common lexing functions.
+def _process_font_style_macro(line: str) -> Optional[Token]:
+    """Process a font style macro discovered while processing a
+    multiline macro.
+    """
+    token: Optional[Token] = None
+    stripped = line.rstrip()
+    if not stripped.startswith('.'):
+        token = Text(stripped)
+    elif stripped.startswith('.B'):
+        split_ = stripped.split(' ', 1)
+        token = Bold(split_[1])
+    elif stripped.startswith('.I'):
+        split_ = stripped.split(' ', 1)
+        token = Italics(split_[1])
+    return token
+
+
+# Specific token classes.
 # Document structure tokens.
 @dataclass
 class Example(Token):
-    text: str = ''
+    contents: list[Token] = field(default_factory=list)
 
-    def process_line(self, line: str) -> None:
+    def process_next(self, line: str) -> bool:
         """Process the next line of text."""
-        if not self.text:
-            self.text = f'{line}\n'
-        elif line:
-            self.text = f'{self.text}{line}\n'
+        if line.startswith('.EE'):
+            return True
+
+        token = Text(line)
+        self.contents.append(token)
+        return False
 
 
 @dataclass
@@ -42,9 +64,10 @@ class RelativeIndentStart(Token):
 class Section(Token):
     heading_text: str = ''
 
-    def process_line(self, line: str) -> None:
+    def process_next(self, line: str) -> bool:
         """Process the next line of text."""
         self.heading_text = line.rstrip()
+        return True
 
 
 @dataclass
@@ -67,17 +90,25 @@ class Title(Token):
 
 # Paragraph tokens.
 @dataclass
+class AdditionalHeader(Token):
+    value: str
+
+
+@dataclass
 class IndentedParagraph(Token):
     tag: str = ''
     indent: str = '1'
-    text: str = ''
+    contents: list[Token] = field(default_factory=list)
 
-    def process_line(self, line: str) -> None:
-        """Process the next line of text."""
-        if not self.text:
-            self.text = f'{line}\n'
-        elif line:
-            self.text = f'{self.text}{line}\n'
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        if not line:
+            return False
+        token: Optional[Token] = _process_font_style_macro(line)
+        if token:
+            self.contents.append(token)
+            return False
+        return True
 
 
 @dataclass
@@ -86,35 +117,42 @@ class Paragraph(Token):
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
-        if line.startswith('.'):
-            return True
-
-        if line:
-            token = Text(line.rstrip())
+        if not line:
+            return False
+        token: Optional[Token] = _process_font_style_macro(line)
+        if token:
             self.contents.append(token)
-
-        return False
+            return False
+        return True
 
 
 @dataclass
 class TaggedParagraph(Token):
     indent: str = '1'
     tag: str = ''
-    text: str = ''
-    additional_tags: list[str] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
     _tag_flag: bool = False
 
-    def process_line(self, line: str) -> None:
-        """Process the next line of text."""
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        token: Optional[Token] = None
+        end = False
+
         if not self.tag:
             self.tag = line.rstrip()
+        elif line.startswith('.TQ'):
+            self._tag_flag = True
         elif self._tag_flag:
-            self.additional_tags.append(line.rstrip())
+            token = AdditionalHeader(line.rstrip())
             self._tag_flag = False
-        elif not self.text:
-            self.text = f'{line}\n'
         elif line:
-            self.text = f'{self.text}{line}\n'
+            token = _process_font_style_macro(line)
+            if line and not token:
+                end = True
+
+        if token:
+            self.contents.append(token)
+        return end
 
 
 @dataclass
@@ -146,6 +184,60 @@ class Synopsis(Token):
         return False
 
 
+# Hyperlink and email tokens.
+@dataclass
+class EmailAddress(Token):
+    address: str
+    contents: list[Token] = field(default_factory=list)
+    punctuation: str = ''
+
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        if line.startswith('.ME'):
+            args = line.rstrip().split(' ')
+            if len(args) > 1:
+                self.punctuation = args[1]
+            return True
+
+        if line:
+            token = Text(line.rstrip())
+            self.contents.append(token)
+
+        return False
+
+
+@dataclass
+class Url(Token):
+    address: str
+    contents: list[Token] = field(default_factory=list)
+    punctuation: str = ''
+
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        if line.startswith('.UE'):
+            args = line.rstrip().split(' ')
+            if len(args) > 1:
+                self.punctuation = args[1]
+            return True
+
+        if line:
+            token = Text(line.rstrip())
+            self.contents.append(token)
+
+        return False
+
+
+# Font style macros.
+@dataclass
+class Bold(Token):
+    text: str
+
+
+@dataclass
+class Italics(Token):
+    text: str
+
+
 # Lexer functions.
 def lex(text: str) -> tuple[Token, ...]:
     """Lex the given document."""
@@ -154,25 +246,16 @@ def lex(text: str) -> tuple[Token, ...]:
     state: Optional[Token] = None
     buffer = ''
     for line in lines:
+        token: Optional[Token] = None
+
         # Handle multiline macros.
-        if state and isinstance(state, (Paragraph, Synopsis)):
-            end = state.process_next(line)
-            if end:
-                tokens.append(state)
-                state = None
-        elif state and not line.startswith('.'):
-            state.process_line(line)
-        elif isinstance(state, TaggedParagraph) and line.startswith('.TQ'):
-            state._tag_flag = True
-        elif state:
+        if state and state.process_next(line):
             tokens.append(state)
             state = None
 
-        token: Optional[Token] = None
-
         # Determine the relevant macro for the line and create
         # the token for that macro.
-        if line.startswith('.EE'):
+        elif line.startswith('.EE'):
             token = None
 
         elif line.startswith('.EX'):
@@ -180,10 +263,16 @@ def lex(text: str) -> tuple[Token, ...]:
 
         elif line.startswith('.IP'):
             args = line.rstrip().split(' ')
-            if len(args) > 1:
-                state = IndentedParagraph(*args[1:])
+            if len(args) == 2:
+                state = IndentedParagraph(args[1])
+            elif len(args) > 2:
+                state = IndentedParagraph(args[1], args[2])
             else:
                 state = IndentedParagraph()
+
+        elif line.startswith('.MT'):
+            args = line.split(' ')
+            state = EmailAddress(args[1])
 
         elif (
             line.startswith('.P')
@@ -234,6 +323,10 @@ def lex(text: str) -> tuple[Token, ...]:
                 state = TaggedParagraph(args[1])
             else:
                 state = TaggedParagraph()
+
+        elif line.startswith('.UR'):
+            args = line.split(' ')
+            state = Url(args[1])
 
         # Add the token to the lexed document.
         if token:
