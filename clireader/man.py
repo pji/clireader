@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
-# Base token classe.
+# Base token classes.
 class Token:
     """A superclass for lexical tokens."""
     def process_next(self, line: str) -> bool:
@@ -16,21 +16,55 @@ class Token:
         return True
 
 
+@dataclass
+class Text(Token):
+    text: str
+
+
+@dataclass
+class MultilineFontStyleToken(Text):
+    text: str = ''
+
+
 # Common lexing functions.
-def _process_font_style_macro(line: str) -> Optional[Token]:
+def _build_multiline_font_style_token(
+    class_: type,
+    line: str
+) -> MultilineFontStyleToken:
+    token = class_()
+    if ' ' in line:
+        split_ = line.split(' ', 1)
+        token.text = split_[1]
+    return token
+
+
+def _process_font_style_macro(
+    line: str,
+    contents: Optional[list[Text]] = None
+) -> Optional[Text]:
     """Process a font style macro discovered while processing a
     multiline macro.
     """
-    token: Optional[Token] = None
+    token: Optional[Text] = None
     stripped = line.rstrip()
-    if not stripped.startswith('.'):
+    if (
+        not stripped.startswith('.')
+        and contents
+        and not contents[-1].text
+    ):
+        token = contents.pop()
+        if isinstance(token, MultilineFontStyleToken):
+            token.text = stripped
+    elif not stripped.startswith('.'):
         token = Text(stripped)
     elif stripped.startswith('.B'):
-        split_ = stripped.split(' ', 1)
-        token = Bold(split_[1])
+        token = _build_multiline_font_style_token(Bold, stripped)
     elif stripped.startswith('.I'):
-        split_ = stripped.split(' ', 1)
-        token = Italics(split_[1])
+        token = _build_multiline_font_style_token(Italics, stripped)
+    elif stripped.startswith('.SB'):
+        token = _build_multiline_font_style_token(SmallBold, stripped)
+    elif stripped.startswith('.SM'):
+        token = _build_multiline_font_style_token(Small, stripped)
     return token
 
 
@@ -38,7 +72,7 @@ def _process_font_style_macro(line: str) -> Optional[Token]:
 # Document structure tokens.
 @dataclass
 class Example(Token):
-    contents: list[Token] = field(default_factory=list)
+    contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
@@ -98,13 +132,13 @@ class AdditionalHeader(Token):
 class IndentedParagraph(Token):
     tag: str = ''
     indent: str = '1'
-    contents: list[Token] = field(default_factory=list)
+    contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
         if not line:
             return False
-        token: Optional[Token] = _process_font_style_macro(line)
+        token: Optional[Text] = _process_font_style_macro(line)
         if token:
             self.contents.append(token)
             return False
@@ -113,13 +147,13 @@ class IndentedParagraph(Token):
 
 @dataclass
 class Paragraph(Token):
-    contents: list[Token] = field(default_factory=list)
+    contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
         if not line:
             return False
-        token: Optional[Token] = _process_font_style_macro(line)
+        token: Optional[Text] = _process_font_style_macro(line, self.contents)
         if token:
             self.contents.append(token)
             return False
@@ -129,35 +163,30 @@ class Paragraph(Token):
 @dataclass
 class TaggedParagraph(Token):
     indent: str = '1'
-    tag: str = ''
-    contents: list[Token] = field(default_factory=list)
+    tag: list[str] = field(default_factory=list)
+    contents: list[Text] = field(default_factory=list)
     _tag_flag: bool = False
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
-        token: Optional[Token] = None
+        token: Optional[Text] = None
         end = False
 
         if not self.tag:
-            self.tag = line.rstrip()
+            self.tag.append(line.rstrip())
         elif line.startswith('.TQ'):
             self._tag_flag = True
         elif self._tag_flag:
-            token = AdditionalHeader(line.rstrip())
+            self.tag.append(line.rstrip())
             self._tag_flag = False
         elif line:
-            token = _process_font_style_macro(line)
+            token = _process_font_style_macro(line, self.contents)
             if line and not token:
                 end = True
 
         if token:
             self.contents.append(token)
         return end
-
-
-@dataclass
-class Text(Token):
-    value: str
 
 
 # Command synopsis tokens.
@@ -229,13 +258,23 @@ class Url(Token):
 
 # Font style macros.
 @dataclass
-class Bold(Token):
-    text: str
+class Bold(MultilineFontStyleToken):
+    text: str = ''
 
 
 @dataclass
-class Italics(Token):
-    text: str
+class Italics(MultilineFontStyleToken):
+    text: str = ''
+
+
+@dataclass
+class Small(MultilineFontStyleToken):
+    text: str = ''
+
+
+@dataclass
+class SmallBold(MultilineFontStyleToken):
+    text: str = ''
 
 
 # Lexer functions.
@@ -319,8 +358,10 @@ def lex(text: str) -> tuple[Token, ...]:
 
         elif line.startswith('.TP'):
             args = line.rstrip().split(' ')
-            if len(args) > 1:
+            if len(args) == 2:
                 state = TaggedParagraph(args[1])
+            elif len(args) > 2:
+                state = TaggedParagraph(args[1], [args[2],])
             else:
                 state = TaggedParagraph()
 

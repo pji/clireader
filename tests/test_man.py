@@ -31,8 +31,8 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.EX\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
             '.EE\n'
         )
         self.lex_test(exp, text)
@@ -131,8 +131,8 @@ class LexTestCase(ut.TestCase):
         )
         text = (
             f'.IP {exp[0].tag} {exp[0].indent}\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
             f'.B {exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
@@ -148,8 +148,8 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.P\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -164,8 +164,8 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.P\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -180,8 +180,8 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.P\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -195,7 +195,7 @@ class LexTestCase(ut.TestCase):
         exp = (
             man.TaggedParagraph(
                 '1',
-                'spam',
+                ['spam',],
                 [
                     man.Text('eggs bacon ham'),
                     man.Text('baked beans'),
@@ -205,9 +205,9 @@ class LexTestCase(ut.TestCase):
         )
         text = (
             f'.TP {exp[0].indent}\n'
-            f'{exp[0].tag}\n'
-            f'{exp[0].contents[0].value}\n'
-            f'{exp[0].contents[1].value}\n'
+            f'{exp[0].tag[0]}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
             f'.B {exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
@@ -222,10 +222,8 @@ class LexTestCase(ut.TestCase):
         exp = (
             man.TaggedParagraph(
                 '1',
-                'spam',
+                ['spam', 'tomato', 'flapjacks'],
                 [
-                    man.AdditionalHeader('tomato'),
-                    man.AdditionalHeader('flapjacks'),
                     man.Text('eggs bacon ham'),
                     man.Text('baked beans'),
                 ]
@@ -233,13 +231,13 @@ class LexTestCase(ut.TestCase):
         )
         text = (
             f'.TP {exp[0].indent}\n'
-            f'{exp[0].tag}\n'
+            f'{exp[0].tag[0]}\n'
             '.TQ\n'
-            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].tag[1]}\n'
             '.TQ\n'
-            f'{exp[0].contents[1].value}\n'
-            f'{exp[0].contents[2].value}\n'
-            f'{exp[0].contents[3].value}\n'
+            f'{exp[0].tag[2]}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -287,7 +285,7 @@ class LexTestCase(ut.TestCase):
         ),)
         text = (
             f'.MT {exp[0].address}\n'
-            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[0].text}\n'
             f'.ME {exp[0].punctuation}\n'
         )
         self.lex_test(exp, text)
@@ -305,7 +303,7 @@ class LexTestCase(ut.TestCase):
         ),)
         text = (
             f'.UR {exp[0].address}\n'
-            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[0].text}\n'
             f'.UE {exp[0].punctuation}\n'
         )
         self.lex_test(exp, text)
@@ -324,9 +322,29 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.P\n'
-            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[0].text}\n'
             f'.B {exp[0].contents[1].text}\n'
-            f'{exp[0].contents[2].value}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_bold_with_param_in_next_line(self):
+        """When encountering a bold macro (.B) while collecting lines
+        for a multiline macro, the lexer should create a Bold token
+        with the given text and add the token to the token for the
+        multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Bold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.B\n'
+            f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -343,8 +361,106 @@ class LexTestCase(ut.TestCase):
         ]),)
         text = (
             '.P\n'
-            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[0].text}\n'
             f'.I {exp[0].contents[1].text}\n'
-            f'{exp[0].contents[2].value}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_italics_with_param_in_next_line(self):
+        """When encountering an italics macro (.I) while collecting
+        lines for a multiline macro, the lexer should create an Italics
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Italics('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.I\n'
+            f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_small(self):
+        """When encountering an small macro (.SM) while collecting
+        lines for a multiline macro, the lexer should create a Small
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Small('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.SM {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_small_with_param_in_next_line(self):
+        """When encountering a small macro (.SM) while collecting
+        lines for a multiline macro, the lexer should create a Small
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Small('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.SM\n'
+            f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_small_bold(self):
+        """When encountering an small bold macro (.SB) while collecting
+        lines for a multiline macro, the lexer should create a SmallBold
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.SmallBold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.SB {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_small_bold_with_param_in_next_line(self):
+        """When encountering a small bold macro (.SB) while collecting
+        lines for a multiline macro, the lexer should create a SmallBold
+        token with the given text and add the token to the token for
+        the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.SmallBold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.SB\n'
+            f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
