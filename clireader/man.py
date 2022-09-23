@@ -82,14 +82,18 @@ class IndentedParagraph(Token):
 
 @dataclass
 class Paragraph(Token):
-    text: str = ''
+    contents: list[Token] = field(default_factory=list)
 
-    def process_line(self, line: str) -> None:
-        """Process the next line of text."""
-        if not self.text:
-            self.text = f'{line}\n'
-        elif line:
-            self.text = f'{self.text}{line}\n'
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        if line.startswith('.'):
+            return True
+
+        if line:
+            token = Text(line.rstrip())
+            self.contents.append(token)
+
+        return False
 
 
 @dataclass
@@ -113,10 +117,33 @@ class TaggedParagraph(Token):
             self.text = f'{self.text}{line}\n'
 
 
+@dataclass
+class Text(Token):
+    value: str
+
+
 # Command synopsis tokens.
+@dataclass
+class Option(Token):
+    option_name: str
+    option_argument: str = ''
+
+
 @dataclass
 class Synopsis(Token):
     command: str
+    contents: list[Token] = field(default_factory=list)
+
+    def process_next(self, line: str) -> bool:
+        if line.startswith('.YS'):
+            return True
+
+        if line.startswith('.OP'):
+            args = line.rstrip().split(' ')
+            token = Option(*args[1:])
+            self.contents.append(token)
+
+        return False
 
 
 # Lexer functions.
@@ -128,11 +155,13 @@ def lex(text: str) -> tuple[Token, ...]:
     buffer = ''
     for line in lines:
         # Handle multiline macros.
-        if state and not line.startswith('.'):
+        if state and isinstance(state, (Paragraph, Synopsis)):
+            end = state.process_next(line)
+            if end:
+                tokens.append(state)
+                state = None
+        elif state and not line.startswith('.'):
             state.process_line(line)
-        elif isinstance(state, Synopsis) and line.startswith('.YS'):
-            tokens.append(state)
-            state = None
         elif isinstance(state, TaggedParagraph) and line.startswith('.TQ'):
             state._tag_flag = True
         elif state:
@@ -193,7 +222,7 @@ def lex(text: str) -> tuple[Token, ...]:
 
         elif line.startswith('.SY'):
             args = line.split(' ')
-            state = Synopsis(*args[1:])
+            state = Synopsis(args[1])
 
         elif line.startswith('.TH'):
             args = line.split(' ')

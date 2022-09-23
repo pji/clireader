@@ -128,11 +128,14 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Text('bacon ham'),
+        ]),)
         text = (
             '.P\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
         )
         self.lex_test(exp, text)
 
@@ -141,11 +144,14 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Text('bacon ham'),
+        ]),)
         text = (
-            '.LP\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
+            '.P\n'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
         )
         self.lex_test(exp, text)
 
@@ -154,11 +160,14 @@ class LexTestCase(ut.TestCase):
         should begin collecting the following lines into a token then
         return a Paragraph token containing the collected text.
         """
-        exp = (man.Paragraph('spam eggs\nbacon ham\n'),)
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.Text('bacon ham'),
+        ]),)
         text = (
-            '.PP\n'
-            f'{exp[0].text[:9]}\n'
-            f'{exp[0].text[10:]}'
+            '.P\n'
+            f'{exp[0].contents[0].value}\n'
+            f'{exp[0].contents[1].value}\n'
         )
         self.lex_test(exp, text)
 
@@ -211,6 +220,21 @@ class LexTestCase(ut.TestCase):
         exp = (man.Synopsis('spam'),)
         text = (
             f'.SY {exp[0].command}\n'
+            '.YS'
+        )
+        self.lex_test(exp, text)
+
+    def test_synopsis_with_option(self):
+        """When encountering an option macro (.OP) after a synopsis
+        begin macro (.SY) but before a synopsis end macro (.YS), the
+        lexer should. The lexer should then return a Synopsis token
+        containing the collected tokens.
+        """
+        exp = (man.Synopsis('spam', [man.Option('-e', 'eggs'),]),)
+        text = (
+            f'.SY {exp[0].command}\n'
+            f'.OP {exp[0].contents[0].option_name} '
+            f'{exp[0].contents[0].option_argument}\n'
             '.YS'
         )
         self.lex_test(exp, text)
