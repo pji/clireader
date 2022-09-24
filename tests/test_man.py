@@ -630,7 +630,7 @@ class ParseTestCase(ut.TestCase):
         self.parse_test(exp, tokens)
 
     def test_doc_with_simple_title(self):
-        """Given the simplest document, the parse should return a
+        """Given the simplest document, the parser should return a
         string containing its contents.
         """
         exp = (
@@ -639,9 +639,36 @@ class ParseTestCase(ut.TestCase):
             '\n'
             '\n'
             'eggs\n'
+            '\n'
+            '\n'
+            '\n'
+            '                    SPAM\n'
         )
         tokens = (
             man.Title('spam'),
             man.Text('eggs'),
         )
         self.parse_test(exp, tokens)
+
+    def test_doc_with_complex_title(self):
+        """Given a document with a complex title, the parser should
+        return a string containing its contents.
+        """
+        exp = (
+            'SPAM(1)  bacon   SPAM(1)\n'
+            '\n'
+            '\n'
+            '\n'
+            'eggs\n'
+            '\n'
+            '\n'
+            '\n'
+            'ham    1/1/70    SPAM(1)\n'
+        )
+        tokens = (
+            man.Title('spam', '1', '1/1/70', 'ham', 'bacon'),
+            man.Text('eggs'),
+        )
+        self.parse_test(exp, tokens)
+
+#           '012345678901234567890123'

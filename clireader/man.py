@@ -87,12 +87,27 @@ class Title(Token):
     header_middle: str = ''
 
     def __str__(self) -> str:
+        if self.section:
+            return f'{self.title.upper()}({self.section})'
         return self.title.upper()
+
+    def footer(self, width: int = 80) -> str:
+        l_text = self.footer_inside
+        m_text = self.footer_middle
+        r_text = str(self)
+        total_text = len(l_text) + len(m_text) + len(r_text)
+        total_gap = width - total_text
+        l_gap = ' ' * (total_gap // 2)
+        r_gap = ' ' * (-(-total_gap // 2))
+        text = f'\n\n\n{l_text}{l_gap}{m_text}{r_gap}{r_text}\n'
+        return text
 
     def parse(self, width: int = 80) -> str:
         title = str(self)
-        whitespace = ' ' * (width - 2 * len(title))
-        text = title + whitespace + title + '\n\n\n\n'
+        total_gap = width - (len(title) * 2 + len(self.header_middle))
+        l_gap = ' ' * (total_gap // 2)
+        r_gap = ' ' * (-(-total_gap // 2))
+        text = f'{title}{l_gap}{self.header_middle}{r_gap}{title}\n\n\n\n'
         return text
 
 
@@ -463,9 +478,17 @@ def lex(text: str) -> tuple[Token, ...]:
 def parse(tokens: Sequence[Token], width: int = 80) -> str:
     """Parse the tokens into a string."""
     text = ''
+    footer = ''
     for token in tokens:
+        if isinstance(token, Title):
+            footer = token.footer(width)
+
         if not text:
             text = token.parse(width)
         else:
             text = f'{text}{token.parse()}'
+
+    if footer:
+        text = f'{text}{footer}'
+
     return text
