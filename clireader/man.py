@@ -9,6 +9,7 @@ from typing import Optional
 
 
 # Base token classes.
+@dataclass
 class Token:
     """A superclass for lexical tokens."""
     def process_next(self, line: str) -> bool:
@@ -73,8 +74,14 @@ def _process_font_style_macro(
         token = _build_multiline_font_style_token(Bold, stripped)
     elif stripped.startswith('.IB'):
         token = _build_singleline_font_style_token(ItalicBold, stripped)
+    elif stripped.startswith('.IR'):
+        token = _build_singleline_font_style_token(ItalicRoman, stripped)
     elif stripped.startswith('.I'):
         token = _build_multiline_font_style_token(Italics, stripped)
+    elif stripped.startswith('.RB'):
+        token = _build_singleline_font_style_token(RomanBold, stripped)
+    elif stripped.startswith('.RI'):
+        token = _build_singleline_font_style_token(RomanItalic, stripped)
     elif stripped.startswith('.SB'):
         token = _build_multiline_font_style_token(SmallBold, stripped)
     elif stripped.startswith('.SM'):
@@ -296,11 +303,28 @@ class BoldItalic(Text):
     text: str = ''
 
 
+@dataclass
 class BoldRoman(Text):
     text: str = ''
 
 
+@dataclass
 class ItalicBold(Text):
+    text: str = ''
+
+
+@dataclass
+class ItalicRoman(Text):
+    text: str = ''
+
+
+@dataclass
+class RomanBold(Text):
+    text: str = ''
+
+
+@dataclass
+class RomanItalic(Text):
     text: str = ''
 
 

@@ -425,7 +425,7 @@ class LexTestCase(ut.TestCase):
         )
         self.lex_test(exp, text)
 
-    def test_italics_bold(self):
+    def test_italic_bold(self):
         """When encountering a italics bold macro (.IB) while collecting
         lines for a multiline macro, the lexer should create a
         ItalicBold token with the given text and add the token to the
@@ -440,6 +440,63 @@ class LexTestCase(ut.TestCase):
             '.P\n'
             f'{exp[0].contents[0].text}\n'
             f'.IB {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_italic_roman(self):
+        """When encountering a italics roman macro (.IR) while collecting
+        lines for a multiline macro, the lexer should create a
+        ItalicRoman token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.ItalicRoman('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.IR {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_roman_bold(self):
+        """When encountering a roman bold macro (.RB) while collecting
+        lines for a multiline macro, the lexer should create a
+        RomanBold token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.RomanBold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.RB {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_roman_italic(self):
+        """When encountering a roman italic macro (.RI) while collecting
+        lines for a multiline macro, the lexer should create a
+        RomanItalic token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.RomanItalic('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.RI {exp[0].contents[1].text}\n'
             f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
