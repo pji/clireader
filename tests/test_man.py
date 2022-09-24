@@ -578,3 +578,70 @@ class LexTestCase(ut.TestCase):
             f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
+
+    def test_text(self):
+        """When encountering a line that doesn't start with a macro,
+        the lexer should create a Text token with the given text.
+        """
+        exp = (
+            man.Text('spam eggs'),
+            man.Text('bacon ham'),
+        )
+        text = (
+            f'{exp[0].text}\n'
+            f'{exp[1].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    # Other macros.
+    def test_empty(self):
+        """When encountering a line that starts with a period but
+        doesn't contain a recognized macro, the lexer should
+        collect the line and return it in a Empty token.
+        """
+        exp = (man.Empty('spam'),)
+        text = (
+            '.spam\n'
+        )
+        self.lex_test(exp, text)
+
+
+class ParseTestCase(ut.TestCase):
+    def setUp(self):
+        self.width = 24
+
+    def parse_test(self, exp, tokens):
+        """Determine if parsing the given tokens returns the expected
+        result.
+        """
+        # Run test.
+        act = man.parse(tokens, self.width)
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    # Parsing test.
+    def test_simplest_doc(self):
+        """Given the simplest document, the parse should return a
+        string containing its contents.
+        """
+        exp = 'spam\n'
+        tokens = (man.Text('spam'),)
+        self.parse_test(exp, tokens)
+
+    def test_doc_with_simple_title(self):
+        """Given the simplest document, the parse should return a
+        string containing its contents.
+        """
+        exp = (
+            'SPAM                SPAM\n'
+            '\n'
+            '\n'
+            '\n'
+            'eggs\n'
+        )
+        tokens = (
+            man.Title('spam'),
+            man.Text('eggs'),
+        )
+        self.parse_test(exp, tokens)

@@ -5,7 +5,7 @@ man
 A parser for documents formatted with the man troff macros.
 """
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Sequence
 
 
 # Base token classes.
@@ -16,10 +16,17 @@ class Token:
         """Process the next line of text."""
         return True
 
+    def parse(self, width: int = 80) -> str:
+        """Parse the token into text."""
+        return str(self)
+
 
 @dataclass
 class Text(Token):
     text: str
+
+    def __str__(self) -> str:
+        return f'{self.text}\n'
 
 
 @dataclass
@@ -27,69 +34,6 @@ class MultilineFontStyleToken(Text):
     text: str = ''
 
 
-# Common lexing functions.
-def _build_multiline_font_style_token(
-    class_: type,
-    line: str
-) -> MultilineFontStyleToken:
-    token = class_()
-    if ' ' in line:
-        split_ = line.split(' ', 1)
-        token.text = split_[1]
-    return token
-
-
-def _build_singleline_font_style_token(
-    class_: type,
-    line: str
-) -> Text:
-    split_ = line.split(' ', 1)
-    return class_(split_[1])
-
-
-def _process_font_style_macro(
-    line: str,
-    contents: Optional[list[Text]] = None
-) -> Optional[Text]:
-    """Process a font style macro discovered while processing a
-    multiline macro.
-    """
-    token: Optional[Text] = None
-    stripped = line.rstrip()
-    if (
-        not stripped.startswith('.')
-        and contents
-        and not contents[-1].text
-    ):
-        token = contents.pop()
-        if isinstance(token, MultilineFontStyleToken):
-            token.text = stripped
-    elif not stripped.startswith('.'):
-        token = Text(stripped)
-    elif stripped.startswith('.BI'):
-        token = _build_singleline_font_style_token(BoldItalic, stripped)
-    elif stripped.startswith('.BR'):
-        token = _build_singleline_font_style_token(BoldRoman, stripped)
-    elif stripped.startswith('.B'):
-        token = _build_multiline_font_style_token(Bold, stripped)
-    elif stripped.startswith('.IB'):
-        token = _build_singleline_font_style_token(ItalicBold, stripped)
-    elif stripped.startswith('.IR'):
-        token = _build_singleline_font_style_token(ItalicRoman, stripped)
-    elif stripped.startswith('.I'):
-        token = _build_multiline_font_style_token(Italics, stripped)
-    elif stripped.startswith('.RB'):
-        token = _build_singleline_font_style_token(RomanBold, stripped)
-    elif stripped.startswith('.RI'):
-        token = _build_singleline_font_style_token(RomanItalic, stripped)
-    elif stripped.startswith('.SB'):
-        token = _build_multiline_font_style_token(SmallBold, stripped)
-    elif stripped.startswith('.SM'):
-        token = _build_multiline_font_style_token(Small, stripped)
-    return token
-
-
-# Specific token classes.
 # Document structure tokens.
 @dataclass
 class Example(Token):
@@ -141,6 +85,15 @@ class Title(Token):
     footer_middle: str = ''
     footer_inside: str = ''
     header_middle: str = ''
+
+    def __str__(self) -> str:
+        return self.title.upper()
+
+    def parse(self, width: int = 80) -> str:
+        title = str(self)
+        whitespace = ' ' * (width - 2 * len(title))
+        text = title + whitespace + title + '\n\n\n\n'
+        return text
 
 
 # Paragraph tokens.
@@ -328,7 +281,74 @@ class RomanItalic(Text):
     text: str = ''
 
 
+# Other tokens.
+@dataclass
+class Empty(Text):
+    text: str = ''
+
+
 # Lexer functions.
+def _build_multiline_font_style_token(
+    class_: type,
+    line: str
+) -> MultilineFontStyleToken:
+    token = class_()
+    if ' ' in line:
+        split_ = line.split(' ', 1)
+        token.text = split_[1]
+    return token
+
+
+def _build_singleline_font_style_token(
+    class_: type,
+    line: str
+) -> Text:
+    split_ = line.split(' ', 1)
+    return class_(split_[1])
+
+
+def _process_font_style_macro(
+    line: str,
+    contents: Optional[list[Text]] = None
+) -> Optional[Text]:
+    """Process a font style macro discovered while processing a
+    multiline macro.
+    """
+    token: Optional[Text] = None
+    stripped = line.rstrip()
+    if (
+        not stripped.startswith('.')
+        and contents
+        and not contents[-1].text
+    ):
+        token = contents.pop()
+        if isinstance(token, MultilineFontStyleToken):
+            token.text = stripped
+    elif not stripped.startswith('.'):
+        token = Text(stripped)
+    elif stripped.startswith('.BI'):
+        token = _build_singleline_font_style_token(BoldItalic, stripped)
+    elif stripped.startswith('.BR'):
+        token = _build_singleline_font_style_token(BoldRoman, stripped)
+    elif stripped.startswith('.B'):
+        token = _build_multiline_font_style_token(Bold, stripped)
+    elif stripped.startswith('.IB'):
+        token = _build_singleline_font_style_token(ItalicBold, stripped)
+    elif stripped.startswith('.IR'):
+        token = _build_singleline_font_style_token(ItalicRoman, stripped)
+    elif stripped.startswith('.I'):
+        token = _build_multiline_font_style_token(Italics, stripped)
+    elif stripped.startswith('.RB'):
+        token = _build_singleline_font_style_token(RomanBold, stripped)
+    elif stripped.startswith('.RI'):
+        token = _build_singleline_font_style_token(RomanItalic, stripped)
+    elif stripped.startswith('.SB'):
+        token = _build_multiline_font_style_token(SmallBold, stripped)
+    elif stripped.startswith('.SM'):
+        token = _build_multiline_font_style_token(Small, stripped)
+    return token
+
+
 def lex(text: str) -> tuple[Token, ...]:
     """Lex the given document."""
     lines = text.split('\n')
@@ -339,9 +359,10 @@ def lex(text: str) -> tuple[Token, ...]:
         token: Optional[Token] = None
 
         # Handle multiline macros.
-        if state and state.process_next(line):
-            tokens.append(state)
-            state = None
+        if state:
+            if state.process_next(line):
+                tokens.append(state)
+                state = None
 
         # Determine the relevant macro for the line and create
         # the token for that macro.
@@ -420,12 +441,31 @@ def lex(text: str) -> tuple[Token, ...]:
             args = line.split(' ')
             state = Url(args[1])
 
+        elif line.startswith('.'):
+            token = Empty(line[1:])
+
+        elif line:
+            token = Text(line.rstrip())
+
         # Add the token to the lexed document.
         if token:
             tokens.append(token)
+
     else:
         if state:
             tokens.append(state)
             state = None
 
     return tuple(tokens)
+
+
+# Parsing.
+def parse(tokens: Sequence[Token], width: int = 80) -> str:
+    """Parse the tokens into a string."""
+    text = ''
+    for token in tokens:
+        if not text:
+            text = token.parse(width)
+        else:
+            text = f'{text}{token.parse()}'
+    return text
