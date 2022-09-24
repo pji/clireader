@@ -348,6 +348,44 @@ class LexTestCase(ut.TestCase):
         )
         self.lex_test(exp, text)
 
+    def test_bold_italics(self):
+        """When encountering a bold italics macro (.BI) while collecting
+        lines for a multiline macro, the lexer should create a
+        BoldItalic token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.BoldItalic('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.BI {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_bold_roman(self):
+        """When encountering a bold roman macro (.BR) while collecting
+        lines for a multiline macro, the lexer should create a
+        BoldRoman token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.BoldRoman('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.BR {exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
     def test_italics(self):
         """When encountering an italics macro (.I) while collecting
         lines for a multiline macro, the lexer should create a Italics
@@ -383,6 +421,25 @@ class LexTestCase(ut.TestCase):
             f'{exp[0].contents[0].text}\n'
             f'.I\n'
             f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_italics_bold(self):
+        """When encountering a italics bold macro (.IB) while collecting
+        lines for a multiline macro, the lexer should create a
+        ItalicBold token with the given text and add the token to the
+        token for the multiline macro.
+        """
+        exp = (man.Paragraph([
+            man.Text('spam eggs'),
+            man.ItalicBold('baked beans'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'{exp[0].contents[0].text}\n'
+            f'.IB {exp[0].contents[1].text}\n'
             f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)

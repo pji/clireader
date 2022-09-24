@@ -38,6 +38,14 @@ def _build_multiline_font_style_token(
     return token
 
 
+def _build_singleline_font_style_token(
+    class_: type,
+    line: str
+) -> Text:
+    split_ = line.split(' ', 1)
+    return class_(split_[1])
+
+
 def _process_font_style_macro(
     line: str,
     contents: Optional[list[Text]] = None
@@ -57,8 +65,14 @@ def _process_font_style_macro(
             token.text = stripped
     elif not stripped.startswith('.'):
         token = Text(stripped)
+    elif stripped.startswith('.BI'):
+        token = _build_singleline_font_style_token(BoldItalic, stripped)
+    elif stripped.startswith('.BR'):
+        token = _build_singleline_font_style_token(BoldRoman, stripped)
     elif stripped.startswith('.B'):
         token = _build_multiline_font_style_token(Bold, stripped)
+    elif stripped.startswith('.IB'):
+        token = _build_singleline_font_style_token(ItalicBold, stripped)
     elif stripped.startswith('.I'):
         token = _build_multiline_font_style_token(Italics, stripped)
     elif stripped.startswith('.SB'):
@@ -274,6 +288,19 @@ class Small(MultilineFontStyleToken):
 
 @dataclass
 class SmallBold(MultilineFontStyleToken):
+    text: str = ''
+
+
+@dataclass
+class BoldItalic(Text):
+    text: str = ''
+
+
+class BoldRoman(Text):
+    text: str = ''
+
+
+class ItalicBold(Text):
     text: str = ''
 
 
