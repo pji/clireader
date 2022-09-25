@@ -734,6 +734,9 @@ class ParseTokenTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
 
+        self.bold = '\x1b[1m'
+        self.nml = '\x1b(B\x1b[m'
+
     def parse_test(self, exp, token):
         """Determine if parsing the given tokens returns the expected
         result.
@@ -768,6 +771,29 @@ class ParseTokenTestCase(ut.TestCase):
     def test_section(self):
         """Given a terminal width, Section.parse() should return a
         string representing the object. Since filling is disabled,
+        the contents are not reflowed for the given width but are
+        instead truncated.
+        """
+        exp = (
+            f'{self.bold}SPAM{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.Section('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    @ut.skip
+    def test_subheading(self):
+        """Given a terminal width, Subheading.parse() should return
+        a string representing the object. Since filling is disabled,
         the contents are not reflowed for the given width but are
         instead truncated.
         """

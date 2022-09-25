@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from textwrap import wrap
 from typing import Iterable, Optional, Sequence
 
+from blessed import Terminal
+
 
 # Base token classes.
 @dataclass
@@ -88,7 +90,8 @@ class Section(Token):
 
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
-        text = f'{self.heading_text.upper()}\n'
+        term = Terminal()
+        text = f'{term.bold}{self.heading_text.upper()}{term.normal}\n'
         lines = [token.parse().rstrip() for token in self.contents]
         paragraph = ' '.join(line for line in lines)
         indent = ' ' * 4
