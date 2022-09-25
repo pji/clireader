@@ -88,12 +88,55 @@ class LexTestCase(ut.TestCase):
         text = f'.SH\n{exp[0].heading_text}'
         self.lex_test(exp, text)
 
+    def test_section_with_following_text(self):
+        """When encountering a section header macro (.SH) with a
+        parameter on the next line and following text lines, the
+        lexer should return the correct token.
+        """
+        exp = (man.Section(
+            'spam',
+            [
+                man.Text('eggs bacon'),
+                man.Text('ham baked beans'),
+            ]
+        ),)
+        text = (
+            '.SH\n'
+            f'{exp[0].heading_text}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
+        )
+        self.lex_test(exp, text)
+
     def test_subheading(self):
         """When encountering a title header macro (.TH) and up to
         five parameters, the Lexer should return the correct token.
         """
         exp = (man.Subheading('spam'),)
         text = f'.SS {exp[0].subheading_text}'
+        self.lex_test(exp, text)
+
+    def test_subheading(self):
+        """When encountering a title header macro (.TH) and up to
+        five parameters, the Lexer should return the correct token.
+        """
+        """When encountering a section header macro (.SH) with a
+        parameter on the next line and following text lines, the
+        lexer should return the correct token.
+        """
+        exp = (man.Subheading(
+            'spam',
+            [
+                man.Text('eggs bacon'),
+                man.Text('ham baked beans'),
+            ]
+        ),)
+        text = (
+            '.SS\n'
+            f'{exp[0].subheading_text}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
+        )
         self.lex_test(exp, text)
 
     def test_title(self):
@@ -670,5 +713,41 @@ class ParseTestCase(ut.TestCase):
             man.Text('eggs'),
         )
         self.parse_test(exp, tokens)
+
+
+class ParseTokenTestCase(ut.TestCase):
+    def setUp(self):
+        self.width = 24
+
+    def parse_test(self, exp, token):
+        """Determine if parsing the given tokens returns the expected
+        result.
+        """
+        # Run test.
+        act = token.parse(self.width)
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    # Parsing test.
+    def test_example(self):
+        """Given a terminal width, Example.parse() should return a
+        string representing the object. Since filling is disabled,
+        the contents are not reflowed for the given width but are
+        instead truncated.
+        """
+        exp = (
+            'spam eggs bacon ham bake\n'
+            'spam\n'
+            'spam eggs\n'
+            'spam eggs bacon ham bake\n'
+        )
+        token = man.Example([
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
 
 #           '012345678901234567890123'

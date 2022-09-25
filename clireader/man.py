@@ -16,7 +16,7 @@ class Token:
         """Process the next line of text."""
         return True
 
-    def parse(self, width: int = 80) -> str:
+    def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
         return str(self)
 
@@ -48,6 +48,13 @@ class Example(Token):
         self.contents.append(token)
         return False
 
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        text = f'{self.contents[0].text[:width]}\n'
+        for token in self.contents[1:]:
+            text = f'{text}{token.text[:width]}\n'
+        return text
+
 
 @dataclass
 class RelativeIndentEnd(Token):
@@ -62,20 +69,41 @@ class RelativeIndentStart(Token):
 @dataclass
 class Section(Token):
     heading_text: str = ''
+    contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
-        self.heading_text = line.rstrip()
+        stripped = line.rstrip()
+        if not self.heading_text:
+            self.heading_text = stripped
+            return False
+        if not stripped:
+            return False
+        token: Optional[Text] = _process_font_style_macro(line, self.contents)
+        if token:
+            self.contents.append(token)
+            return False
         return True
 
 
 @dataclass
 class Subheading(Token):
     subheading_text: str = ''
+    contents: list[Text] = field(default_factory=list)
 
-    def process_line(self, line: str) -> None:
+    def process_next(self, line: str) -> bool:
         """Process the next line of text."""
-        self.subheading_text = line.rstrip()
+        stripped = line.rstrip()
+        if not self.subheading_text:
+            self.subheading_text = stripped
+            return False
+        if not stripped:
+            return False
+        token: Optional[Text] = _process_font_style_macro(line, self.contents)
+        if token:
+            self.contents.append(token)
+            return False
+        return True
 
 
 @dataclass
@@ -91,20 +119,25 @@ class Title(Token):
             return f'{self.title.upper()}({self.section})'
         return self.title.upper()
 
-    def footer(self, width: int = 80) -> str:
+    def footer(self, width: Optional[int] = None) -> str:
         l_text = self.footer_inside
         m_text = self.footer_middle
         r_text = str(self)
         total_text = len(l_text) + len(m_text) + len(r_text)
+        if width is None:
+            width = total_text + 2
         total_gap = width - total_text
         l_gap = ' ' * (total_gap // 2)
         r_gap = ' ' * (-(-total_gap // 2))
         text = f'\n\n\n{l_text}{l_gap}{m_text}{r_gap}{r_text}\n'
         return text
 
-    def parse(self, width: int = 80) -> str:
+    def parse(self, width: Optional[int] = None) -> str:
         title = str(self)
-        total_gap = width - (len(title) * 2 + len(self.header_middle))
+        total_text = len(title) * 2 + len(self.header_middle)
+        if width is None:
+            width = total_text + 2
+        total_gap = width - total_text
         l_gap = ' ' * (total_gap // 2)
         r_gap = ' ' * (-(-total_gap // 2))
         text = f'{title}{l_gap}{self.header_middle}{r_gap}{title}\n\n\n\n'
@@ -112,11 +145,6 @@ class Title(Token):
 
 
 # Paragraph tokens.
-@dataclass
-class AdditionalHeader(Token):
-    value: str
-
-
 @dataclass
 class IndentedParagraph(Token):
     tag: str = ''
@@ -422,16 +450,16 @@ def lex(text: str) -> tuple[Token, ...]:
                 token = RelativeIndentStart()
 
         elif line.startswith('.SH'):
-            args = line.split(' ')
-            if args[1:]:
-                token = Section(*args[1:])
+            args = line.split(' ', 1)
+            if len(args) > 1:
+                token = Section(args[1])
             else:
                 state = Section()
 
         elif line.startswith('.SS'):
-            args = line.split(' ')
-            if args[1:]:
-                token = Subheading(*args[1:])
+            args = line.split(' ', 1)
+            if len(args) > 1:
+                token = Subheading(args[1])
             else:
                 state = Subheading()
 
