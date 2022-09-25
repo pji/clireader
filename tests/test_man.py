@@ -116,11 +116,8 @@ class LexTestCase(ut.TestCase):
         text = f'.SS {exp[0].subheading_text}'
         self.lex_test(exp, text)
 
-    def test_subheading(self):
-        """When encountering a title header macro (.TH) and up to
-        five parameters, the Lexer should return the correct token.
-        """
-        """When encountering a section header macro (.SH) with a
+    def test_subheading_with_following_text(self):
+        """When encountering a subheading macro (.SS) with a
         parameter on the next line and following text lines, the
         lexer should return the correct token.
         """
@@ -225,6 +222,24 @@ class LexTestCase(ut.TestCase):
             '.P\n'
             f'{exp[0].contents[0].text}\n'
             f'{exp[0].contents[1].text}\n'
+        )
+        self.lex_test(exp, text)
+
+    def test_paragraph_with_empty_token(self):
+        """When encountering a paragraph macro (.P), the Lexer
+        should begin collecting the following lines into a token then
+        return a Paragraph token containing the collected text.
+        """
+        exp = (man.Paragraph([
+            man.Empty('baked beans'),
+            man.Text('spam eggs'),
+            man.Text('bacon ham'),
+        ]),)
+        text = (
+            '.P\n'
+            f'.{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
+            f'{exp[0].contents[2].text}\n'
         )
         self.lex_test(exp, text)
 
@@ -743,6 +758,28 @@ class ParseTokenTestCase(ut.TestCase):
             'spam eggs bacon ham bake\n'
         )
         token = man.Example([
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_section(self):
+        """Given a terminal width, Section.parse() should return a
+        string representing the object. Since filling is disabled,
+        the contents are not reflowed for the given width but are
+        instead truncated.
+        """
+        exp = (
+            'SPAM\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.Section('spam', [
             man.Text('spam eggs bacon ham baked beans'),
             man.Text('spam'),
             man.Text('spam eggs'),

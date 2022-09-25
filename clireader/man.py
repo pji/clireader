@@ -5,7 +5,8 @@ man
 A parser for documents formatted with the man troff macros.
 """
 from dataclasses import dataclass, field
-from typing import Optional, Sequence
+from textwrap import wrap
+from typing import Iterable, Optional, Sequence
 
 
 # Base token classes.
@@ -84,6 +85,19 @@ class Section(Token):
             self.contents.append(token)
             return False
         return True
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        text = f'{self.heading_text.upper()}\n'
+        lines = [token.parse().rstrip() for token in self.contents]
+        paragraph = ' '.join(line for line in lines)
+        indent = ' ' * 4
+        wrapped = [f'{indent}{paragraph}',]
+        if width is not None:
+            wrapped = wrap(paragraph, width - 4)
+        for line in wrapped:
+            text = f'{text}{indent}{line.rstrip()}\n'
+        return text
 
 
 @dataclass
@@ -330,6 +344,30 @@ class Empty(Text):
     text: str = ''
 
 
+# Token collections.
+STRUCTURE_TOKENS: dict[str, Optional[type]] = {
+    '.ee': None,
+    '.ex': Example,
+    '.re': RelativeIndentEnd,
+    '.ri': RelativeIndentStart,
+    '.sh': Section,
+    '.ss': Subheading,
+    '.th': Title,
+}
+PARAGRAPH_TOKENS: dict[str, Optional[type]] = {
+    '.ip': IndentedParagraph,
+    '.lp': Paragraph,
+    '.p': Paragraph,
+    '.pp': Paragraph,
+    '.tp': TaggedParagraph,
+}
+COMMAND_SYNOPSIS_TOKENS: dict[str, Optional[type]] = {
+    '.sy': Synopsis,
+    '.op': Option,
+    '.ys': None,
+}
+
+
 # Lexer functions.
 def _build_multiline_font_style_token(
     class_: type,
@@ -348,6 +386,14 @@ def _build_singleline_font_style_token(
 ) -> Text:
     split_ = line.split(' ', 1)
     return class_(split_[1])
+
+
+def is_macro_type(macros: Iterable[str], line: str) -> bool:
+    """Does the given line match a non-font style macro."""
+    for macro in macros:
+        if line.startswith(macro):
+            return True
+    return False
 
 
 def _process_font_style_macro(
@@ -389,6 +435,12 @@ def _process_font_style_macro(
         token = _build_multiline_font_style_token(SmallBold, stripped)
     elif stripped.startswith('.SM'):
         token = _build_multiline_font_style_token(Small, stripped)
+    elif (
+        not is_macro_type(STRUCTURE_TOKENS, stripped)
+        and not is_macro_type(PARAGRAPH_TOKENS, stripped)
+        and not is_macro_type(COMMAND_SYNOPSIS_TOKENS, stripped)
+    ):
+        token = Empty(stripped[1:])
     return token
 
 
