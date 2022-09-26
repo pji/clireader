@@ -91,16 +91,8 @@ class Section(Token):
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
         term = Terminal()
-        text = f'{term.bold}{self.heading_text.upper()}{term.normal}\n'
-        lines = [token.parse().rstrip() for token in self.contents]
-        paragraph = ' '.join(line for line in lines)
-        indent = ' ' * 4
-        wrapped = [f'{indent}{paragraph}',]
-        if width is not None:
-            wrapped = wrap(paragraph, width - 4)
-        for line in wrapped:
-            text = f'{text}{indent}{line.rstrip()}\n'
-        return text
+        text = f'{term.bold}{self.heading_text}{term.normal}\n'
+        return _parse_contents(self.contents, width, text)
 
 
 @dataclass
@@ -121,6 +113,12 @@ class Subheading(Token):
             self.contents.append(token)
             return False
         return True
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        text = f'  {term.bold}{self.subheading_text}{term.normal}\n'
+        return _parse_contents(self.contents, width, text)
 
 
 @dataclass
@@ -165,7 +163,7 @@ class Title(Token):
 @dataclass
 class IndentedParagraph(Token):
     tag: str = ''
-    indent: str = '1'
+    indent: str = '4'
     contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
@@ -177,6 +175,14 @@ class IndentedParagraph(Token):
             self.contents.append(token)
             return False
         return True
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        text = ''
+        if self.tag:
+            text = f'{self.tag}\n'
+        return _parse_contents(self.contents, width, text, int(self.indent))
 
 
 @dataclass
@@ -193,10 +199,14 @@ class Paragraph(Token):
             return False
         return True
 
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        return _parse_contents(self.contents, width)
+
 
 @dataclass
 class TaggedParagraph(Token):
-    indent: str = '1'
+    indent: str = '4'
     tag: list[str] = field(default_factory=list)
     contents: list[Text] = field(default_factory=list)
     _tag_flag: bool = False
@@ -221,6 +231,12 @@ class TaggedParagraph(Token):
         if token:
             self.contents.append(token)
         return end
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        text = f'{self.tag}\n'
+        return _parse_contents(self.contents, width, text, int(self.indent))
 
 
 # Command synopsis tokens.
@@ -558,6 +574,29 @@ def lex(text: str) -> tuple[Token, ...]:
 
 
 # Parsing.
+def _parse_contents(
+    contents: Iterable[Token],
+    width: Optional[int] = None,
+    text: str = '',
+    indent_size: int = 4
+) -> str:
+    """Parse the given list of tokens into text."""
+    # Remove pre-existing hard wrapping.
+    lines = [token.parse().rstrip() for token in contents]
+    paragraph = ' '.join(line for line in lines)
+
+    # Wrap the text for the given terminal width.
+    indent = ' ' * indent_size
+    wrapped = [f'{indent}{paragraph}',]
+    if width is not None:
+        wrapped = wrap(paragraph, width - indent_size)
+
+    # Add any line indentation and return.
+    for line in wrapped:
+        text = f'{text}{indent}{line.rstrip()}\n'
+    return text
+
+
 def parse(tokens: Sequence[Token], width: int = 80) -> str:
     """Parse the tokens into a string."""
     text = ''

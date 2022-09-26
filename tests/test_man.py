@@ -747,7 +747,7 @@ class ParseTokenTestCase(ut.TestCase):
         # Determine test result.
         self.assertEqual(exp, act)
 
-    # Parsing test.
+    # Document structure tokens.
     def test_example(self):
         """Given a terminal width, Example.parse() should return a
         string representing the object. Since filling is disabled,
@@ -770,12 +770,10 @@ class ParseTokenTestCase(ut.TestCase):
 
     def test_section(self):
         """Given a terminal width, Section.parse() should return a
-        string representing the object. Since filling is disabled,
-        the contents are not reflowed for the given width but are
-        instead truncated.
+        string representing the object.
         """
         exp = (
-            f'{self.bold}SPAM{self.nml}\n'
+            f'{self.bold}spam{self.nml}\n'
             '    spam eggs bacon ham\n'
             '    baked beans spam\n'
             '    spam eggs spam eggs\n'
@@ -790,22 +788,98 @@ class ParseTokenTestCase(ut.TestCase):
         ])
         self.parse_test(exp, token)
 
-    @ut.skip
     def test_subheading(self):
         """Given a terminal width, Subheading.parse() should return
-        a string representing the object. Since filling is disabled,
-        the contents are not reflowed for the given width but are
-        instead truncated.
+        a string representing the object.
         """
         exp = (
-            'SPAM\n'
+            f'  {self.bold}spam{self.nml}\n'
             '    spam eggs bacon ham\n'
             '    baked beans spam\n'
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
         )
-        token = man.Section('spam', [
+        token = man.Subheading('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    # Paragraph tokens.
+    def test_indented_paragraph(self):
+        """Given a terminal width, IndentedParagraph.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.IndentedParagraph(contents=[
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_indented_paragraph_with_tag(self):
+        """Given a terminal width, IndentedParagraph.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            'spam\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.IndentedParagraph('spam', '4', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_paragraph(self):
+        """Given a terminal width, Paragraph.parse() should return
+        a string representing the object.
+        """
+        exp = (
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.Paragraph([
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_tagged_paragraph(self):
+        """Given a terminal width, TaggedParagraph.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            'spam\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+        )
+        token = man.TaggedParagraph('4', 'spam', [
             man.Text('spam eggs bacon ham baked beans'),
             man.Text('spam'),
             man.Text('spam eggs'),
