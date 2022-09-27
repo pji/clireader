@@ -259,18 +259,48 @@ class Synopsis(Token):
     contents: list[Token] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
+        token: Optional[Token] = None
         if line.startswith('.YS'):
             return True
 
-        if line.startswith('.OP'):
+        elif line.startswith('.OP'):
             args = line.rstrip().split(' ')
             token = Option(*args[1:])
+            self.contents.append(token)
+
+        elif line.startswith('.SY'):
+            args = line.rstrip().split(' ')
+            token = Synopsis(args[1])
             self.contents.append(token)
 
         return False
 
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
+        if any(isinstance(token, Synopsis) for token in self.contents):
+            return self._parse_multiple_synopsis(width)
+        return self._parse_single_synopsis(width)
+
+    def _parse_multiple_synopsis(self, width: Optional[int] = None) -> str:
+        # Split contents into multiple synopses.
+        synopses = []
+        synopsis = Synopsis(self.command)
+        for token in self.contents:
+            if isinstance(token, Synopsis):
+                synopses.append(synopsis)
+                synopsis = token
+            else:
+                synopsis.contents.append(token)
+        else:
+            synopses.append(synopsis)
+
+        # Get the text for each synopsis, concatenate, and return.
+        text = synopses[0].parse(width)
+        for synopsis in synopses[1:]:
+            text = f'{text}{synopsis.parse()}'
+        return text
+
+    def _parse_single_synopsis(self, width: Optional[int] = None) -> str:
         term = Terminal()
         text = f'{term.bold}{self.command}{term.normal} '
         indent = ' ' * (len(self.command) + 1)

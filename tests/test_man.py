@@ -328,6 +328,31 @@ class LexTestCase(ut.TestCase):
         )
         self.lex_test(exp, text)
 
+    def test_synopsis_with_option_and_multiple_synopses(self):
+        """When encountering a synopsis begin macro (.SY) after a
+        synopsis begin macro (.SY) but before a synopsis end macro
+        (.YS), the lexer should then return a Synopsis token
+        containing the collected tokens.
+        """
+        exp = (man.Synopsis('spam', [
+            man.Option('-e', 'eggs'),
+            man.Option('-b', 'bacon'),
+            man.Synopsis('ham', []),
+            man.Option('-f', 'flapjacks'),
+        ]),)
+        text = (
+            f'.SY {exp[0].command}\n'
+            f'.OP {exp[0].contents[0].option_name} '
+            f'{exp[0].contents[0].option_argument}\n'
+            f'.OP {exp[0].contents[1].option_name} '
+            f'{exp[0].contents[1].option_argument}\n'
+            f'.SY {exp[0].contents[2].command}\n'
+            f'.OP {exp[0].contents[3].option_name} '
+            f'{exp[0].contents[3].option_argument}\n'
+            '.YS'
+        )
+        self.lex_test(exp, text)
+
     # Hyperlink and email macros.
     def test_email_address(self):
         """When encountering an email address begin macro (.MT), the
@@ -911,6 +936,30 @@ class ParseTokenTestCase(ut.TestCase):
             man.Option('-s', 'spam'),
             man.Option('-e', 'eggs'),
             man.Option('-b', 'bacon')
+        ])
+        self.parse_test(exp, token)
+
+    def test_synopsis_with_multiple_synopses(self):
+        """Given a terminal width, Synopsis.parse() should
+        return a string representing the object. If there are
+        multiple commands within the Synopsis, the string should
+        not contain a blank line between the end of the last
+        option of the last command and the next command.
+        """
+        exp = (
+            f'{self.bold}spam{self.nml} '
+            f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}] '
+            f'[{self.bold}-e{self.nml} {self.udln}eggs{self.nml}]\n'
+            f'     [{self.bold}-b{self.nml} {self.udln}bacon{self.nml}]\n'
+            f'{self.bold}ham{self.nml} '
+            f'[{self.bold}-f{self.nml} {self.udln}flapjack{self.nml}]\n'
+        )
+        token = man.Synopsis('spam', [
+            man.Option('-s', 'spam'),
+            man.Option('-e', 'eggs'),
+            man.Option('-b', 'bacon'),
+            man.Synopsis('ham', []),
+            man.Option('-f', 'flapjack')
         ])
         self.parse_test(exp, token)
 
