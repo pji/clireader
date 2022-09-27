@@ -336,6 +336,14 @@ class EmailAddress(Token):
 
         return False
 
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        addr = f'mailto:{self.address}'
+        text = _parse_contents(self.contents, width, '', 0).rstrip()
+        link = term.link(addr, text)
+        return f'{link}{self.punctuation}'
+
 
 @dataclass
 class Url(Token):
@@ -356,6 +364,14 @@ class Url(Token):
             self.contents.append(token)
 
         return False
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        addr = f'{self.address}'
+        text = _parse_contents(self.contents, width, '', 0).rstrip()
+        link = term.link(addr, text)
+        return f'{link}{self.punctuation}'
 
 
 # Font style macros.

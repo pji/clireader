@@ -760,7 +760,9 @@ class ParseTokenTestCase(ut.TestCase):
         self.width = 24
 
         self.bold = '\x1b[1m'
+        self.link = '\x1b]8'
         self.nml = '\x1b(B\x1b[m'
+        self.st = '\x1b\\'
         self.udln = '\x1b[4m'
 
     def parse_test(self, exp, token):
@@ -961,6 +963,23 @@ class ParseTokenTestCase(ut.TestCase):
             man.Synopsis('ham', []),
             man.Option('-f', 'flapjack')
         ])
+        self.parse_test(exp, token)
+
+    # Hyperlink and email tokens.
+    def test_email_address(self):
+        """Given a terminal width, EmailAddress.parse() should
+        return a string representing the object.
+        """
+        exp = f'{self.link};;mailto:spam{self.st}bacon{self.link};;{self.st}.'
+        token = man.EmailAddress('spam', [man.Text('bacon'),], '.')
+        self.parse_test(exp, token)
+
+    def test_url(self):
+        """Given a terminal width, Url.parse() should
+        return a string representing the object.
+        """
+        exp = f'{self.link};;http://spam{self.st}bacon{self.link};;{self.st}.'
+        token = man.Url('http://spam', [man.Text('bacon'),], '.')
         self.parse_test(exp, token)
 
 #           '012345678901234567890123'
