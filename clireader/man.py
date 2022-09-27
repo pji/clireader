@@ -245,6 +245,13 @@ class Option(Token):
     option_name: str
     option_argument: str = ''
 
+    def __str__(self) -> str:
+        term = Terminal()
+        return (
+            f'[{term.bold}{self.option_name}{term.normal} '
+            f'{term.underline}{self.option_argument}{term.normal}]'
+        )
+
 
 @dataclass
 class Synopsis(Token):
@@ -261,6 +268,21 @@ class Synopsis(Token):
             self.contents.append(token)
 
         return False
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        term = Terminal()
+        text = f'{term.bold}{self.command}{term.normal} '
+        indent = ' ' * (len(self.command) + 1)
+        opt_width = width
+        if width is not None:
+            opt_width = width - len(indent)
+        options = ' '.join(t.parse(opt_width) for t in self.contents).rstrip()
+        lines = term.wrap(options, opt_width)
+        text = f'{text}{lines[0]}\n'
+        for line in lines[1:]:
+            text = f'{text}{indent}{line}\n'
+        return text
 
 
 # Hyperlink and email tokens.

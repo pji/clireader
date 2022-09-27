@@ -736,6 +736,7 @@ class ParseTokenTestCase(ut.TestCase):
 
         self.bold = '\x1b[1m'
         self.nml = '\x1b(B\x1b[m'
+        self.udln = '\x1b[4m'
 
     def parse_test(self, exp, token):
         """Determine if parsing the given tokens returns the expected
@@ -884,6 +885,32 @@ class ParseTokenTestCase(ut.TestCase):
             man.Text('spam'),
             man.Text('spam eggs'),
             man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    # Command synopsis tokens.
+    def test_option(self):
+        """Given a terminal width, Option.parse() should
+        return a string representing the object.
+        """
+        exp = f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}]'
+        token = man.Option('-s', 'spam')
+        self.parse_test(exp, token)
+
+    def test_synopsis(self):
+        """Given a terminal width, Synopsis.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            f'{self.bold}spam{self.nml} '
+            f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}] '
+            f'[{self.bold}-e{self.nml} {self.udln}eggs{self.nml}]\n'
+            f'     [{self.bold}-b{self.nml} {self.udln}bacon{self.nml}]\n'
+        )
+        token = man.Synopsis('spam', [
+            man.Option('-s', 'spam'),
+            man.Option('-e', 'eggs'),
+            man.Option('-b', 'bacon')
         ])
         self.parse_test(exp, token)
 
