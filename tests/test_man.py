@@ -5,6 +5,7 @@ test_man
 Unit tests for the clireader.man module.
 """
 import unittest as ut
+from unittest.mock import patch, PropertyMock
 
 from clireader import man
 
@@ -477,7 +478,7 @@ class LexTestCase(ut.TestCase):
         """
         exp = (man.Paragraph([
             man.Text('spam eggs'),
-            man.Italics('baked beans'),
+            man.Italic('baked beans'),
             man.Text('bacon ham'),
         ]),)
         text = (
@@ -496,7 +497,7 @@ class LexTestCase(ut.TestCase):
         """
         exp = (man.Paragraph([
             man.Text('spam eggs'),
-            man.Italics('baked beans'),
+            man.Italic('baked beans'),
             man.Text('bacon ham'),
         ]),)
         text = (
@@ -708,7 +709,7 @@ class ParseTestCase(ut.TestCase):
         """Given the simplest document, the parse should return a
         string containing its contents.
         """
-        exp = 'spam\n'
+        exp = 'spam'
         tokens = (man.Text('spam'),)
         self.parse_test(exp, tokens)
 
@@ -722,7 +723,6 @@ class ParseTestCase(ut.TestCase):
             '\n'
             '\n'
             'eggs\n'
-            '\n'
             '\n'
             '\n'
             '                    SPAM\n'
@@ -743,7 +743,6 @@ class ParseTestCase(ut.TestCase):
             '\n'
             '\n'
             'eggs\n'
-            '\n'
             '\n'
             '\n'
             'ham    1/1/70    SPAM(1)\n'
@@ -980,6 +979,119 @@ class ParseTokenTestCase(ut.TestCase):
         """
         exp = f'{self.link};;http://spam{self.st}bacon{self.link};;{self.st}.'
         token = man.Url('http://spam', [man.Text('bacon'),], '.')
+        self.parse_test(exp, token)
+
+    # Font style macros.
+    def test_bold(self):
+        """Given a terminal width, Bold.parse() should return a string
+        representing the object.
+        """
+        exp = f'    {self.bold}spam{self.nml}\n'
+        token = man.Paragraph([man.Bold('spam'),])
+        self.parse_test(exp, token)
+
+    def test_italic(self):
+        """Given a terminal width, Italic.parse() should return a string
+        representing the object. The blessed package doesn't support
+        italic, so Italic uses underlines to format instead.
+        """
+        exp = f'    {self.udln}spam{self.nml}\n'
+        token = man.Paragraph([man.Italic('spam'),])
+        self.parse_test(exp, token)
+
+    def test_small(self):
+        """Given a terminal width, Small.parse() should return a string
+        representing the object. The blessed package doesn't support
+        small, so Small doesn't make any changes to the text'.
+        """
+        exp = f'    spam\n'
+        token = man.Paragraph([man.Small('spam'),])
+        self.parse_test(exp, token)
+
+    def test_smallbold(self):
+        """Given a terminal width, Bold.parse() should return a string
+        representing the object. The blessed package doesn't support
+        small, so SmallBold only bolds the text.
+        """
+        exp = f'    {self.bold}spam{self.nml}\n'
+        token = man.Paragraph([man.SmallBold('spam'),])
+        self.parse_test(exp, token)
+
+    # Alternating font style macros.
+    def test_bold_italic(self):
+        """Given a terminal width, BoldItalic.parse() should return a
+        string representing the object. The blessed package doesn't
+        support italic, so Italic uses underlines to format instead.
+        """
+        exp = (
+            f'    {self.bold}spam{self.nml} '
+            f'{self.udln}eggs{self.nml} '
+            f'{self.bold}bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.BoldItalic('spam eggs bacon'),])
+        self.parse_test(exp, token)
+
+    def test_bold_roman(self):
+        """Given a terminal width, BoldRoman.parse() should return a
+        string representing the object.
+        """
+        exp = (
+            f'    {self.bold}spam{self.nml} '
+            f'eggs{self.nml} '
+            f'{self.bold}bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.BoldRoman('spam eggs bacon'),])
+        self.parse_test(exp, token)
+
+    def test_italic_bold(self):
+        """Given a terminal width, ItalicBold.parse() should return a
+        string representing the object. The blessed package doesn't
+        support italic, so Italic uses underlines to format instead.
+        """
+        exp = (
+            f'    {self.udln}spam{self.nml} '
+            f'{self.bold}eggs{self.nml} '
+            f'{self.udln}bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.ItalicBold('spam eggs bacon'),])
+        self.parse_test(exp, token)
+
+    def test_italic_roman(self):
+        """Given a terminal width, ItalicRoman.parse() should return a
+        string representing the object. The blessed package doesn't
+        support italic, so Italic uses underlines to format instead.
+        """
+        exp = (
+            f'    {self.udln}spam{self.nml} '
+            f'eggs{self.nml} '
+            f'{self.udln}bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.ItalicRoman('spam eggs bacon'),])
+        self.parse_test(exp, token)
+
+    def test_roman_bold(self):
+        """Given a terminal width, RomanBold.parse() should return a
+        string representing the object.
+        """
+        exp = (
+            f'    spam{self.nml} '
+            f'{self.bold}eggs{self.nml} '
+            f'bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.RomanBold('spam eggs bacon'),])
+        self.parse_test(exp, token)
+
+    def test_roman_italic(self):
+        """Given a terminal width, RomanItalic.parse() should return a
+        string representing the object. The blessed package doesn't
+        support italic, so Italic uses underlines to format instead.
+        """
+        exp = (
+            f'    spam{self.nml} '
+            f'{self.udln}eggs{self.nml} '
+            f'bacon{self.nml}\n'
+        )
+        token = man.Paragraph([man.RomanItalic('spam eggs bacon'),])
         self.parse_test(exp, token)
 
 #           '012345678901234567890123'

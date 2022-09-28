@@ -29,7 +29,26 @@ class Text(Token):
     text: str
 
     def __str__(self) -> str:
-        return f'{self.text}\n'
+        return f'{self.text}'
+
+
+@dataclass
+class AlternatingFontStyleToken(Text):
+    text: str = ''
+
+    def _alternate_style(self, style_a: str, style_b: str) -> str:
+        term = Terminal()
+        words = self.text.split(' ')
+        style = style_a
+        formatteds = []
+        for word in words:
+            formatted = f'{style}{word}{term.normal}'
+            formatteds.append(formatted)
+            if style == style_a:
+                style = style_b
+            else:
+                style = style_a
+        return ' '.join(formatteds)
 
 
 @dataclass
@@ -379,10 +398,18 @@ class Url(Token):
 class Bold(MultilineFontStyleToken):
     text: str = ''
 
+    def __str__(self) -> str:
+        term = Terminal()
+        return f'{term.bold}{self.text}{term.normal}'
+
 
 @dataclass
-class Italics(MultilineFontStyleToken):
+class Italic(MultilineFontStyleToken):
     text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return f'{term.underline}{self.text}{term.normal}'
 
 
 @dataclass
@@ -394,35 +421,64 @@ class Small(MultilineFontStyleToken):
 class SmallBold(MultilineFontStyleToken):
     text: str = ''
 
+    def __str__(self) -> str:
+        term = Terminal()
+        return f'{term.bold}{self.text}{term.normal}'
 
+
+# Alternating font style macros
 @dataclass
-class BoldItalic(Text):
+class BoldItalic(AlternatingFontStyleToken):
     text: str = ''
 
-
-@dataclass
-class BoldRoman(Text):
-    text: str = ''
-
-
-@dataclass
-class ItalicBold(Text):
-    text: str = ''
-
-
-@dataclass
-class ItalicRoman(Text):
-    text: str = ''
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style(term.bold, term.underline)
 
 
 @dataclass
-class RomanBold(Text):
+class BoldRoman(AlternatingFontStyleToken):
     text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style(term.bold, '')
 
 
 @dataclass
-class RomanItalic(Text):
+class ItalicBold(AlternatingFontStyleToken):
     text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style(term.underline, term.bold)
+
+
+@dataclass
+class ItalicRoman(AlternatingFontStyleToken):
+    text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style(term.underline, '')
+
+
+@dataclass
+class RomanBold(AlternatingFontStyleToken):
+    text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style('', term.bold)
+
+
+@dataclass
+class RomanItalic(AlternatingFontStyleToken):
+    text: str = ''
+
+    def __str__(self) -> str:
+        term = Terminal()
+        return self._alternate_style('', term.underline)
 
 
 # Other tokens.
@@ -513,7 +569,7 @@ def _process_font_style_macro(
     elif stripped.startswith('.IR'):
         token = _build_singleline_font_style_token(ItalicRoman, stripped)
     elif stripped.startswith('.I'):
-        token = _build_multiline_font_style_token(Italics, stripped)
+        token = _build_multiline_font_style_token(Italic, stripped)
     elif stripped.startswith('.RB'):
         token = _build_singleline_font_style_token(RomanBold, stripped)
     elif stripped.startswith('.RI'):
@@ -649,6 +705,8 @@ def _parse_contents(
     indent_size: int = 4
 ) -> str:
     """Parse the given list of tokens into text."""
+    term = Terminal()
+
     # Remove pre-existing hard wrapping.
     lines = [token.parse().rstrip() for token in contents]
     paragraph = ' '.join(line for line in lines)
@@ -657,7 +715,7 @@ def _parse_contents(
     indent = ' ' * indent_size
     wrapped = [f'{indent}{paragraph}',]
     if width is not None:
-        wrapped = wrap(paragraph, width - indent_size)
+        wrapped = term.wrap(paragraph, width - indent_size)
 
     # Add any line indentation and return.
     for line in wrapped:
