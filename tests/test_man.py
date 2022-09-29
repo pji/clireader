@@ -694,15 +694,24 @@ class ParseTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
 
+        self.bold = '\x1b[1m'
+        self.link = '\x1b]8'
+        self.nml = '\x1b(B\x1b[m'
+        self.st = '\x1b\\'
+        self.udln = '\x1b[4m'
+
     def parse_test(self, exp, tokens):
         """Determine if parsing the given tokens returns the expected
         result.
         """
         # Run test.
         act = man.parse(tokens, self.width)
+#         split = act.split('\n')
+#         text = [f'{ord(s)}' for s in split[11]]
+#         print(' '.join(text))
 
         # Determine test result.
-        self.assertEqual(exp, act)
+        self.assertMultiLineEqual(exp, act)
 
     # Parsing test.
     def test_simplest_doc(self):
@@ -751,6 +760,93 @@ class ParseTestCase(ut.TestCase):
             man.Title('spam', '1', '1/1/70', 'ham', 'bacon'),
             man.Text('eggs'),
         )
+        self.parse_test(exp, tokens)
+
+    def test_simple_man_page_doc(self):
+        """Given the tokens for a very simple man page, the parser
+        should return a string containing the page.
+        """
+        b = self.bold
+        n = self.nml
+        u = self.udln
+        exp = (
+            'SPAM(1)  bacon   SPAM(1)\n'
+            '\n'
+            '\n'
+            '\n'
+            f'{b}NAME{n}\n'
+            '    spam - example man\n'
+            '    page.\n'
+            '\n'
+            f'{b}SYNOPSIS{n}\n'
+            f'    {b}spam{n} [{b}-acdkKZ{n}] [{b}-r{n}\n'
+            f'         {u}eggs{n}]\n'
+            '\n'
+            '    This is just an\n'
+            '    example.\n'
+            '\n'
+            f'{b}DESCRIPTION{n}\n'
+            '    Some text explaining\n'
+            '    what spam is.\n'
+            '\n'
+            '    Even more text,\n'
+            '    which is probably\n'
+            '    too much.\n'
+            '\n'
+            f'{b}OPTIONS{n}\n'
+            '    This will have info\n'
+            '    about the options.\n'
+            '\n'
+            f'  {b}Options{n}\n'
+            '    These are the\n'
+            '    options:\n'
+            '\n'
+            '    -a  Option 1.\n'
+            '\n'
+            '    -b  This option is\n'
+            '        very important.\n'
+            '\n'
+            '    -c  Option 3.\n'
+            '\n'
+            '\n'
+            '\n'
+            '\n'
+            'ham    1/1/70    SPAM(1)\n'
+        )
+        tokens = (
+            man.Title('spam', '1', '1/1/70', 'ham', 'bacon'),
+            man.Section('NAME', [
+                man.Text('spam - example man page.'),
+            ]),
+            man.Section('SYNOPSIS', [
+                man.Synopsis('spam', [
+                    man.Option('-acdkKZ'),
+                    man.Option('-r', 'eggs'),
+                ])
+            ]),
+            man.Paragraph([
+                man.Text('This is just an example.'),
+            ]),
+            man.Section('DESCRIPTION', [
+                man.Text('Some text explaining what spam is.'),
+            ]),
+            man.Paragraph([
+                man.Text('Even more text, which is probably too much.'),
+            ]),
+            man.Section('OPTIONS', [
+                man.Text('This will have info about the options.'),
+            ]),
+            man.Subheading('Options', [
+                man.Text('These are the options:'),
+            ]),
+            man.RelativeIndentStart('4'),
+            man.TaggedParagraph('4', '-a', [man.Text('Option 1.'),]),
+            man.TaggedParagraph('4', '-b', [
+                man.Text('This option is very important.'),
+            ]),
+            man.TaggedParagraph('4', '-c', [man.Text('Option 3.'),]),
+        )
+        self.maxDiff = None
         self.parse_test(exp, tokens)
 
 
@@ -806,6 +902,7 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.Section('spam', [
             man.Text('spam eggs bacon ham baked beans'),
@@ -826,6 +923,7 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.Subheading('spam', [
             man.Text('spam eggs bacon ham baked beans'),
@@ -885,6 +983,7 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.Paragraph([
             man.Text('spam eggs bacon ham baked beans'),
@@ -905,8 +1004,29 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.TaggedParagraph('4', 'spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_tagged_paragraph_short_tag(self):
+        """Given a terminal width, TaggedParagraph.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            '*   spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        )
+        token = man.TaggedParagraph('4', '*', [
             man.Text('spam eggs bacon ham baked beans'),
             man.Text('spam'),
             man.Text('spam eggs'),
@@ -986,7 +1106,7 @@ class ParseTokenTestCase(ut.TestCase):
         """Given a terminal width, Bold.parse() should return a string
         representing the object.
         """
-        exp = f'    {self.bold}spam{self.nml}\n'
+        exp = f'    {self.bold}spam{self.nml}\n\n'
         token = man.Paragraph([man.Bold('spam'),])
         self.parse_test(exp, token)
 
@@ -995,7 +1115,7 @@ class ParseTokenTestCase(ut.TestCase):
         representing the object. The blessed package doesn't support
         italic, so Italic uses underlines to format instead.
         """
-        exp = f'    {self.udln}spam{self.nml}\n'
+        exp = f'    {self.udln}spam{self.nml}\n\n'
         token = man.Paragraph([man.Italic('spam'),])
         self.parse_test(exp, token)
 
@@ -1004,7 +1124,7 @@ class ParseTokenTestCase(ut.TestCase):
         representing the object. The blessed package doesn't support
         small, so Small doesn't make any changes to the text'.
         """
-        exp = f'    spam\n'
+        exp = f'    spam\n\n'
         token = man.Paragraph([man.Small('spam'),])
         self.parse_test(exp, token)
 
@@ -1013,7 +1133,7 @@ class ParseTokenTestCase(ut.TestCase):
         representing the object. The blessed package doesn't support
         small, so SmallBold only bolds the text.
         """
-        exp = f'    {self.bold}spam{self.nml}\n'
+        exp = f'    {self.bold}spam{self.nml}\n\n'
         token = man.Paragraph([man.SmallBold('spam'),])
         self.parse_test(exp, token)
 
@@ -1026,7 +1146,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    {self.bold}spam{self.nml} '
             f'{self.udln}eggs{self.nml} '
-            f'{self.bold}bacon{self.nml}\n'
+            f'{self.bold}bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.BoldItalic('spam eggs bacon'),])
         self.parse_test(exp, token)
@@ -1038,7 +1158,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    {self.bold}spam{self.nml} '
             f'eggs{self.nml} '
-            f'{self.bold}bacon{self.nml}\n'
+            f'{self.bold}bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.BoldRoman('spam eggs bacon'),])
         self.parse_test(exp, token)
@@ -1051,7 +1171,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    {self.udln}spam{self.nml} '
             f'{self.bold}eggs{self.nml} '
-            f'{self.udln}bacon{self.nml}\n'
+            f'{self.udln}bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.ItalicBold('spam eggs bacon'),])
         self.parse_test(exp, token)
@@ -1064,7 +1184,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    {self.udln}spam{self.nml} '
             f'eggs{self.nml} '
-            f'{self.udln}bacon{self.nml}\n'
+            f'{self.udln}bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.ItalicRoman('spam eggs bacon'),])
         self.parse_test(exp, token)
@@ -1076,7 +1196,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    spam{self.nml} '
             f'{self.bold}eggs{self.nml} '
-            f'bacon{self.nml}\n'
+            f'bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.RomanBold('spam eggs bacon'),])
         self.parse_test(exp, token)
@@ -1089,7 +1209,7 @@ class ParseTokenTestCase(ut.TestCase):
         exp = (
             f'    spam{self.nml} '
             f'{self.udln}eggs{self.nml} '
-            f'bacon{self.nml}\n'
+            f'bacon{self.nml}\n\n'
         )
         token = man.Paragraph([man.RomanItalic('spam eggs bacon'),])
         self.parse_test(exp, token)

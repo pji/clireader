@@ -110,8 +110,25 @@ class Section(Token):
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
         term = Terminal()
-        text = f'{term.bold}{self.heading_text}{term.normal}\n'
-        return _parse_contents(self.contents, width, text)
+        text = f'{term.bold}{self.heading_text}{term.normal}'
+        if not any(isinstance(token, Synopsis) for token in self.contents):
+            contents = _parse_contents(self.contents, width, '', 4)
+            return f'{text}\n{contents}\n'
+        else:
+            content_width = width
+            if content_width is not None:
+                content_width -= 4
+            synopses = (t.parse(content_width) for t in self.contents)
+            indent = ' ' * 4
+            lines = []
+            for synopsis in synopses:
+                lines.extend(synopsis.split('\n'))
+            for line in lines:
+                if line:
+                    text = f'{text}\n{indent}{line}'
+                else:
+                    text = f'{text}\n'
+        return f'{text}\n'
 
 
 @dataclass
@@ -137,7 +154,8 @@ class Subheading(Token):
         """Parse the token into text."""
         term = Terminal()
         text = f'  {term.bold}{self.subheading_text}{term.normal}\n'
-        return _parse_contents(self.contents, width, text)
+        text = _parse_contents(self.contents, width, text)
+        return f'{text}\n'
 
 
 @dataclass
@@ -220,7 +238,8 @@ class Paragraph(Token):
 
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
-        return _parse_contents(self.contents, width)
+        parsed = _parse_contents(self.contents, width)
+        return f'{parsed}\n'
 
 
 @dataclass
@@ -254,8 +273,13 @@ class TaggedParagraph(Token):
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
         term = Terminal()
-        text = f'{self.tag}\n'
-        return _parse_contents(self.contents, width, text, int(self.indent))
+        indent = int(self.indent)
+        contents = _parse_contents(self.contents, width, '', indent)
+        if len(self.tag) < int(self.indent):
+            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
+        else:
+            text = f'{self.tag}\n{contents}\n'
+        return text
 
 
 # Command synopsis tokens.
@@ -266,10 +290,12 @@ class Option(Token):
 
     def __str__(self) -> str:
         term = Terminal()
-        return (
-            f'[{term.bold}{self.option_name}{term.normal} '
-            f'{term.underline}{self.option_argument}{term.normal}]'
-        )
+        if self.option_argument:
+            return (
+                f'[{term.bold}{self.option_name}{term.normal} '
+                f'{term.underline}{self.option_argument}{term.normal}]'
+            )
+        return f'[{term.bold}{self.option_name}{term.normal}]'
 
 
 @dataclass
@@ -708,7 +734,7 @@ def _parse_contents(
     term = Terminal()
 
     # Remove pre-existing hard wrapping.
-    lines = [token.parse().rstrip() for token in contents]
+    lines = [token.parse(width).rstrip() for token in contents]
     paragraph = ' '.join(line for line in lines)
 
     # Wrap the text for the given terminal width.
@@ -727,14 +753,23 @@ def parse(tokens: Sequence[Token], width: int = 80) -> str:
     """Parse the tokens into a string."""
     text = ''
     footer = ''
+    indent_size = 0
     for token in tokens:
         if isinstance(token, Title):
             footer = token.footer(width)
 
-        if not text:
-            text = token.parse(width)
+        if isinstance(token, RelativeIndentStart):
+            indent_size += int(token.indent)
         else:
-            text = f'{text}{token.parse()}'
+            indent = ' ' * indent_size
+            parsed = token.parse(width - indent_size)
+            split = parsed.split('\n')
+            indented = [f'{indent}{line}'.rstrip() for line in split]
+            joined = '\n'.join(indented)
+            if text:
+                text = f'{text}{joined}'
+            else:
+                text = joined
 
     if footer:
         text = f'{text}{footer}'
