@@ -216,10 +216,13 @@ class IndentedParagraph(Token):
     def parse(self, width: Optional[int] = None) -> str:
         """Parse the token into text."""
         term = Terminal()
-        text = ''
-        if self.tag:
-            text = f'{self.tag}\n'
-        return _parse_contents(self.contents, width, text, int(self.indent))
+        indent = int(self.indent)
+        contents = _parse_contents(self.contents, width, '', indent)
+        if len(self.tag) < int(self.indent):
+            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
+        else:
+            text = f'{self.tag}\n{contents}\n'
+        return text
 
 
 @dataclass

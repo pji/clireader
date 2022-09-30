@@ -808,6 +808,8 @@ class ParseTestCase(ut.TestCase):
             '\n'
             '    -c  Option 3.\n'
             '\n'
+            '    -d  Option 4.\n'
+            '\n'
             '\n'
             '\n'
             '\n'
@@ -845,6 +847,7 @@ class ParseTestCase(ut.TestCase):
                 man.Text('This option is very important.'),
             ]),
             man.TaggedParagraph('4', '-c', [man.Text('Option 3.'),]),
+            man.IndentedParagraph('-d', '4', [man.Text('Option 4.'),]),
         )
         self.maxDiff = None
         self.parse_test(exp, tokens)
@@ -944,6 +947,7 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.IndentedParagraph(contents=[
             man.Text('spam eggs bacon ham baked beans'),
@@ -964,6 +968,7 @@ class ParseTokenTestCase(ut.TestCase):
             '    spam eggs spam eggs\n'
             '    bacon ham baked\n'
             '    beans tomato\n'
+            '\n'
         )
         token = man.IndentedParagraph('spam', '4', [
             man.Text('spam eggs bacon ham baked beans'),
