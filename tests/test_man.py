@@ -706,9 +706,6 @@ class ParseTestCase(ut.TestCase):
         """
         # Run test.
         act = man.parse(tokens, self.width)
-#         split = act.split('\n')
-#         text = [f'{ord(s)}' for s in split[11]]
-#         print(' '.join(text))
 
         # Determine test result.
         self.assertMultiLineEqual(exp, act)
@@ -769,6 +766,8 @@ class ParseTestCase(ut.TestCase):
         b = self.bold
         n = self.nml
         u = self.udln
+        L = self.link
+        s = self.st
         exp = (
             'SPAM(1)  bacon   SPAM(1)\n'
             '\n'
@@ -782,7 +781,7 @@ class ParseTestCase(ut.TestCase):
             f'    {b}spam{n} [{b}-acdkKZ{n}] [{b}-r{n}\n'
             f'         {u}eggs{n}]\n'
             '\n'
-            '    This is just an\n'
+            f'    This is {b}just{n} an\n'
             '    example.\n'
             '\n'
             f'{b}DESCRIPTION{n}\n'
@@ -810,6 +809,15 @@ class ParseTestCase(ut.TestCase):
             '\n'
             '    -d  Option 4.\n'
             '\n'
+            '        There is more to\n'
+            '        say on this.\n'
+            '\n'
+            '    That\'s it.\n'
+            '\n'
+            f'{b}AUTHOR{n}\n'
+            '    This was written by\n'
+            f'    {L};;mailto:spam@spam{s}John Cleese{L};;{s}.\n'
+            '\n'
             '\n'
             '\n'
             '\n'
@@ -827,7 +835,9 @@ class ParseTestCase(ut.TestCase):
                 ])
             ]),
             man.Paragraph([
-                man.Text('This is just an example.'),
+                man.Text('This is'),
+                man.Bold('just'),
+                man.Text('an example.'),
             ]),
             man.Section('DESCRIPTION', [
                 man.Text('Some text explaining what spam is.'),
@@ -848,6 +858,21 @@ class ParseTestCase(ut.TestCase):
             ]),
             man.TaggedParagraph('4', '-c', [man.Text('Option 3.'),]),
             man.IndentedParagraph('-d', '4', [man.Text('Option 4.'),]),
+            man.Paragraph([
+                man.Text('There is more to say on this.'),
+            ]),
+            man.RelativeIndentEnd('4'),
+            man.Paragraph([
+                man.Text('That\'s it.'),
+            ]),
+            man.Section('AUTHOR', [
+                man.Text('This was written by'),
+                man.EmailAddress(
+                    'spam@spam',
+                    [man.Text('John Cleese'),],
+                    '.'
+                ),
+            ]),
         )
         self.maxDiff = None
         self.parse_test(exp, tokens)
@@ -971,6 +996,26 @@ class ParseTokenTestCase(ut.TestCase):
             '\n'
         )
         token = man.IndentedParagraph('spam', '4', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_indented_paragraph_with_short_tag(self):
+        """Given a terminal width, IndentedParagraph.parse() should
+        return a string representing the object.
+        """
+        exp = (
+            '*   spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        )
+        token = man.IndentedParagraph('*', '4', [
             man.Text('spam eggs bacon ham baked beans'),
             man.Text('spam'),
             man.Text('spam eggs'),

@@ -25,6 +25,14 @@ class Token:
 
 
 @dataclass
+class NonPrinting(Token):
+
+    def parse(self, width: Optional[int] = None) -> str:
+        """Parse the token into text."""
+        return ''
+
+
+@dataclass
 class Text(Token):
     text: str
 
@@ -79,12 +87,12 @@ class Example(Token):
 
 
 @dataclass
-class RelativeIndentEnd(Token):
+class RelativeIndentEnd(NonPrinting):
     indent: str = '1'
 
 
 @dataclass
-class RelativeIndentStart(Token):
+class RelativeIndentStart(NonPrinting):
     indent: str = '1'
 
 
@@ -763,16 +771,20 @@ def parse(tokens: Sequence[Token], width: int = 80) -> str:
 
         if isinstance(token, RelativeIndentStart):
             indent_size += int(token.indent)
+        elif isinstance(token, RelativeIndentEnd):
+            indent_size -= int(token.indent)
+        elif isinstance(token, Section):
+            indent_size = 0
+
+        indent = ' ' * indent_size
+        parsed = token.parse(width - indent_size)
+        split = parsed.split('\n')
+        indented = [f'{indent}{line}'.rstrip() for line in split]
+        joined = '\n'.join(indented)
+        if text:
+            text = f'{text}{joined}'
         else:
-            indent = ' ' * indent_size
-            parsed = token.parse(width - indent_size)
-            split = parsed.split('\n')
-            indented = [f'{indent}{line}'.rstrip() for line in split]
-            joined = '\n'.join(indented)
-            if text:
-                text = f'{text}{joined}'
-            else:
-                text = joined
+            text = joined
 
     if footer:
         text = f'{text}{footer}'
