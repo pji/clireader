@@ -316,8 +316,14 @@ class Synopsis(Token):
 
     def process_next(self, line: str) -> bool:
         token: Optional[Token] = None
-        if line.startswith('.YS'):
+        if (
+            is_macro_type(STRUCTURE_TOKENS, line)
+            or is_macro_type(PARAGRAPH_TOKENS, line)
+        ):
             return True
+
+        if line.startswith('.YS'):
+            pass
 
         elif line.startswith('.OP'):
             args = line.rstrip().split(' ')
@@ -380,13 +386,19 @@ class EmailAddress(Token):
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
+        if (
+            is_macro_type(STRUCTURE_TOKENS, line)
+            or is_macro_type(PARAGRAPH_TOKENS, line)
+            or is_macro_type(COMMAND_SYNOPSIS_TOKENS, line)
+        ):
+            return True
+
         if line.startswith('.ME'):
             args = line.rstrip().split(' ')
             if len(args) > 1:
                 self.punctuation = args[1]
-            return True
 
-        if line:
+        elif line:
             token = Text(line.rstrip())
             self.contents.append(token)
 
@@ -409,13 +421,19 @@ class Url(Token):
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
+        if (
+            is_macro_type(STRUCTURE_TOKENS, line)
+            or is_macro_type(PARAGRAPH_TOKENS, line)
+            or is_macro_type(COMMAND_SYNOPSIS_TOKENS, line)
+        ):
+            return True
+
         if line.startswith('.UE'):
             args = line.rstrip().split(' ')
             if len(args) > 1:
                 self.punctuation = args[1]
-            return True
 
-        if line:
+        elif line:
             token = Text(line.rstrip())
             self.contents.append(token)
 
@@ -571,7 +589,8 @@ def _build_singleline_font_style_token(
 def is_macro_type(macros: Iterable[str], line: str) -> bool:
     """Does the given line match a non-font style macro."""
     for macro in macros:
-        if line.startswith(macro):
+        folded = line.casefold()
+        if folded.startswith(macro.casefold()):
             return True
     return False
 
@@ -641,6 +660,9 @@ def lex(text: str) -> tuple[Token, ...]:
 
         # Determine the relevant macro for the line and create
         # the token for that macro.
+        if state:
+            pass
+
         elif line.startswith('.EE'):
             token = None
 
@@ -760,7 +782,7 @@ def _parse_contents(
     return text
 
 
-def parse(tokens: Sequence[Token], width: int = 80) -> str:
+def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
     """Parse the tokens into a string."""
     text = ''
     footer = ''
@@ -777,7 +799,10 @@ def parse(tokens: Sequence[Token], width: int = 80) -> str:
             indent_size = 0
 
         indent = ' ' * indent_size
-        parsed = token.parse(width - indent_size)
+        if width is not None:
+            parsed = token.parse(width - indent_size)
+        else:
+            parsed = token.parse(width)
         split = parsed.split('\n')
         indented = [f'{indent}{line}'.rstrip() for line in split]
         joined = '\n'.join(indented)
@@ -790,3 +815,10 @@ def parse(tokens: Sequence[Token], width: int = 80) -> str:
         text = f'{text}{footer}'
 
     return text
+
+
+# Main line.
+def main(text: str, width: Optional[int]) -> str:
+    """Parse man-style macros."""
+    tokens = lex(text)
+    return parse(tokens, width)

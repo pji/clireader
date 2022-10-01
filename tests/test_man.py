@@ -10,6 +10,48 @@ from unittest.mock import patch, PropertyMock
 from clireader import man
 
 
+class DocumentTestCase(ut.TestCase):
+    def setUp(self):
+        self.width = 24
+
+        self.bold = '\x1b[1m'
+        self.link = '\x1b]8'
+        self.nml = '\x1b(B\x1b[m'
+        self.st = '\x1b\\'
+        self.udln = '\x1b[4m'
+
+    def main_test(self, exp, doc):
+        """Determine if the given document returns the expected text."""
+        # Run test.
+        act = man.main(doc, self.width)
+
+        # Determine text result.
+        self.assertEqual(exp, act)
+
+    # Indentation tests.
+    def test_rs_indentation_persists(self):
+        """Indentation from the .RS macro should persist to the
+        next paragraph.
+        """
+        exp = (
+            '        This paragraph\n'
+            '        is indented.\n'
+            '\n'
+            '        This one proves\n'
+            '        the indentation\n'
+            '        persists.\n'
+            '\n'
+        )
+        doc = (
+            '.RS 4\n'
+            '.P\n'
+            'This paragraph is indented.\n'
+            '.P\n'
+            'This one proves the indentation persists.\n'
+        )
+        self.main_test(exp, doc)
+
+
 class LexTestCase(ut.TestCase):
     def lex_test(self, exp, text):
         """The common test for the lex function."""
