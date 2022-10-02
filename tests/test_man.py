@@ -10,7 +10,6 @@ from unittest.mock import patch, PropertyMock
 from clireader import man
 
 
-@ut.skip
 class DocumentTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
@@ -79,7 +78,6 @@ class DocumentTestCase(ut.TestCase):
         )
         self.main_test(exp, doc)
 
-    @ut.skip
     def test_ip_indent_persists_until_p(self):
         """An indent set by the .IP macro should last until a .P macro."""
         exp = (
