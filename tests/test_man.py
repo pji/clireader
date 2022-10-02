@@ -779,7 +779,6 @@ class LexTestCase(ut.TestCase):
         self.lex_test(exp, text)
 
 
-@ut.skip
 class ParseTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
@@ -942,11 +941,11 @@ class ParseTestCase(ut.TestCase):
                 man.Text('These are the options:'),
             ]),
             man.RelativeIndentStart('4'),
-            man.TaggedParagraph('4', '-a', [man.Text('Option 1.'),]),
-            man.TaggedParagraph('4', '-b', [
+            man.TaggedParagraph('4', ['-a',], [man.Text('Option 1.'),]),
+            man.TaggedParagraph('4', ['-b',], [
                 man.Text('This option is very important.'),
             ]),
-            man.TaggedParagraph('4', '-c', [man.Text('Option 3.'),]),
+            man.TaggedParagraph('4', ['-c',], [man.Text('Option 3.'),]),
             man.IndentedParagraph('-d', '4', [man.Text('Option 4.'),]),
             man.Paragraph([
                 man.Text('There is more to say on this.'),
@@ -968,7 +967,7 @@ class ParseTestCase(ut.TestCase):
         self.parse_test(exp, tokens)
 
 
-class NewParseTokenTestCase(ut.TestCase):
+class ParseTokenTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
 
@@ -1458,13 +1457,13 @@ class NewParseTokenTestCase(ut.TestCase):
             f'[{self.bold}-e{self.nml} {self.udln}eggs{self.nml}]\n'
             f'     [{self.bold}-b{self.nml} {self.udln}bacon{self.nml}]\n'
             '\n'
-        ), 0, 4)
+        ), 0, 0)
         token = man.Synopsis('spam', [
             man.Option('-s', 'spam'),
             man.Option('-e', 'eggs'),
             man.Option('-b', 'bacon')
         ])
-        self.parse_test(exp, token)
+        self.parse_test(exp, token, 0, 0)
 
     def test_synopsis_with_multiple_synopses(self):
         """If there are multiple commands within the Synopsis, the
@@ -1479,7 +1478,7 @@ class NewParseTokenTestCase(ut.TestCase):
             f'{self.bold}ham{self.nml} '
             f'[{self.bold}-f{self.nml} {self.udln}flapjack{self.nml}]\n'
             '\n'
-        ), 0, 4)
+        ), 0, 0)
         token = man.Synopsis('spam', [
             man.Option('-s', 'spam'),
             man.Option('-e', 'eggs'),
@@ -1487,7 +1486,7 @@ class NewParseTokenTestCase(ut.TestCase):
             man.Synopsis('ham', []),
             man.Option('-f', 'flapjack')
         ])
-        self.parse_test(exp, token)
+        self.parse_test(exp, token, 0, 0)
 
     # Hyperlink and email tokens.
     def test_email_address(self):

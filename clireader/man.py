@@ -86,20 +86,29 @@ class ContainerToken(Token):
     ) -> str:
         """Parse the text tokens of the token."""
         # Remove pre-existing hard wrapping.
-        lines = [token.parse(width)[0].rstrip() for token in contents]
-        paragraph = ' '.join(line for line in lines)
+        text_like = (Text, Option, EmailAddress, Url)
+        if all(isinstance(token, text_like) for token in contents):
+            lines = [token.parse(width)[0].rstrip() for token in contents]
+            paragraph = ' '.join(line for line in lines)
 
-        # Wrap the text for the width, margin, and indent.
-        wrapped = [paragraph,]
-        if width is not None:
-            term = Terminal()
-            wrap_width = width - margin - indent
-            wrapped = term.wrap(paragraph, wrap_width)
+            # Wrap the text for the width, margin, and indent.
+            wrapped = [paragraph,]
+            if width is not None:
+                term = Terminal()
+                wrap_width = width - margin - indent
+                wrapped = term.wrap(paragraph, wrap_width)
 
-        # Add indentation and return.
-        lead = ' ' * (margin + indent)
-        text = '\n'.join(f'{lead}{line}' for line in wrapped)
-        return f'{text}\n'
+            # Add indentation and return.
+            lead = ' ' * (margin + indent)
+            text = '\n'.join(f'{lead}{line}' for line in wrapped)
+            return f'{text}\n'
+
+        else:
+            text = ''
+            for token in contents:
+                parsed, *_ = token.parse(width, margin, indent)
+                text += parsed
+            return f'{text.rstrip()}\n'
 
 
 # Document structure tokens.
@@ -323,10 +332,12 @@ class IndentedParagraph(ContainerToken):
         contents = self._parse_contents(self.contents, width, margin, indent)
 
         # If the paragraph is tagged, add the tag.
+        lead = ' ' * margin
         if len(self.tag) < indent:
-            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
+            gap = margin + indent
+            text = f'{lead}{self.tag: <{indent}}{contents[gap:]}\n'
         else:
-            text = f'{self.tag}\n{contents}\n'
+            text = f'{lead}{self.tag}\n{contents}\n'
 
         # Return the text, margin, and new indent.
         return text, margin, indent
@@ -375,10 +386,12 @@ class TaggedParagraph(ContainerToken):
         contents = self._parse_contents(self.contents, width, margin, indent)
 
         # If the paragraph is tagged, add the tag.
+        lead = ' ' * margin
         if len(self.tag) == 1 and len(self.tag[0]) < indent:
-            text = f'{self.tag[0]: <{indent}}{contents[indent:]}\n'
+            gap = margin + indent
+            text = f'{lead}{self.tag[0]: <{indent}}{contents[gap:]}\n'
         else:
-            text = f'{self.tag[0]}\n{contents}\n'
+            text = f'{lead}{self.tag[0]}\n{contents}\n'
 
         # Return the text, margin, and new indent.
         return text, margin, indent
@@ -436,11 +449,17 @@ class Synopsis(ContainerToken):
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
         if any(isinstance(token, Synopsis) for token in self.contents):
-            text = self._parse_multiple_synopsis(width)
+            text = self._parse_multiple_synopsis(width, margin, indent)
             return text, margin, indent
-        return self._parse_single_synopsis(width), margin, indent
+        text = self._parse_single_synopsis(width, margin, indent)
+        return text, margin, indent
 
-    def _parse_multiple_synopsis(self, width: Optional[int] = None) -> str:
+    def _parse_multiple_synopsis(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 0
+    ) -> str:
         # Split contents into multiple synopses.
         synopses = []
         synopsis = Synopsis(self.command)
@@ -456,8 +475,8 @@ class Synopsis(ContainerToken):
         # Get the text for each synopsis, concatenate, and return.
         text = ''
         for synopsis in synopses:
-            parsed = synopsis.parse(width)[0].rstrip()
-            text = f'{text}{parsed}\n'
+            parsed, *_ = synopsis.parse(width, margin, indent)
+            text = f'{text}{parsed.rstrip()}\n'
         return f'{text}\n'
 
     def _parse_single_synopsis(
@@ -468,10 +487,11 @@ class Synopsis(ContainerToken):
     ) -> str:
         # Build the command label.
         term = Terminal()
-        command = f'{term.bold}{self.command}{term.normal}'
+        lead = ' ' * (margin + indent)
+        command = f'{lead}{term.bold}{self.command}{term.normal}'
 
         # Build the options list.
-        opt_indent = len(self.command) + 1
+        opt_indent = len(self.command) + 1 + margin + indent
         options = self._parse_contents(
             self.contents,
             width,
@@ -876,36 +896,12 @@ def lex(text: str) -> tuple[Token, ...]:
 
 
 # Parsing.
-def _parse_contents(
-    contents: Iterable[Token],
-    width: Optional[int] = None,
-    text: str = '',
-    indent_size: int = 4
-) -> str:
-    """Parse the given list of tokens into text."""
-    term = Terminal()
-
-    # Remove pre-existing hard wrapping.
-    lines = [token.parse(width)[0].rstrip() for token in contents]
-    paragraph = ' '.join(line for line in lines)
-
-    # Wrap the text for the given terminal width.
-    indent = ' ' * indent_size
-    wrapped = [f'{indent}{paragraph}',]
-    if width is not None:
-        wrapped = term.wrap(paragraph, width - indent_size)
-
-    # Add any line indentation and return.
-    for line in wrapped:
-        text = f'{text}{indent}{line.rstrip()}\n'
-    return text
-
-
 def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
     """Parse the tokens into a string."""
     text = ''
     footer = ''
     margin = 0
+    indent = 4
     for token in tokens:
         if isinstance(token, Title):
             footer = token.footer(width)
@@ -914,21 +910,9 @@ def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
             margin += int(token.indent)
         elif isinstance(token, RelativeIndentEnd):
             margin -= int(token.indent)
-        elif isinstance(token, Section):
-            margin = 0
 
-        indent = ' ' * margin
-        if width is not None:
-            parsed = token.parse(width - margin)[0]
-        else:
-            parsed = token.parse(width)[0]
-        split = parsed.split('\n')
-        indented = [f'{indent}{line}'.rstrip() for line in split]
-        joined = '\n'.join(indented)
-        if text:
-            text = f'{text}{joined}'
-        else:
-            text = joined
+        parsed, margin, indent = token.parse(width, margin, indent)
+        text += parsed
 
     if footer:
         text = f'{text}{footer}'
