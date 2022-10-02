@@ -79,7 +79,7 @@ class ContainerToken(Token):
     """A superclass for tokens that contain other tokens."""
     def _parse_contents(
         self,
-        contents: list[Text],
+        contents: list[Token],
         width: Optional[int] = None,
         margin: int = 0,
         indent: int = 4
@@ -146,7 +146,7 @@ class RelativeIndentStart(NonPrinting):
 @dataclass
 class Section(ContainerToken):
     heading_text: str = ''
-    contents: list[Text] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
@@ -156,7 +156,10 @@ class Section(ContainerToken):
             return False
         if not stripped:
             return False
-        token: Optional[Text] = _process_font_style_macro(line, self.contents)
+        token: Optional[Token] = _process_font_style_macro(
+            line,
+            self.contents
+        )
         if token:
             self.contents.append(token)
             return False
@@ -181,7 +184,7 @@ class Section(ContainerToken):
 @dataclass
 class Subheading(ContainerToken):
     subheading_text: str = ''
-    contents: list[Text] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
@@ -191,7 +194,10 @@ class Subheading(ContainerToken):
             return False
         if not stripped:
             return False
-        token: Optional[Text] = _process_font_style_macro(line, self.contents)
+        token: Optional[Token] = _process_font_style_macro(
+            line,
+            self.contents
+        )
         if token:
             self.contents.append(token)
             return False
@@ -259,13 +265,16 @@ class Title(Token):
 # Paragraph tokens.
 @dataclass
 class Paragraph(ContainerToken):
-    contents: list[Text] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
         if not line:
             return False
-        token: Optional[Text] = _process_font_style_macro(line, self.contents)
+        token: Optional[Token] = _process_font_style_macro(
+            line,
+            self.contents
+        )
         if token:
             self.contents.append(token)
             return False
@@ -287,13 +296,13 @@ class Paragraph(ContainerToken):
 class IndentedParagraph(ContainerToken):
     tag: str = ''
     indent: str = ''
-    contents: list[Text] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
         if not line:
             return False
-        token: Optional[Text] = _process_font_style_macro(line)
+        token: Optional[Token] = _process_font_style_macro(line)
         if token:
             self.contents.append(token)
             return False
@@ -327,12 +336,12 @@ class IndentedParagraph(ContainerToken):
 class TaggedParagraph(ContainerToken):
     indent: str = '4'
     tag: list[str] = field(default_factory=list)
-    contents: list[Text] = field(default_factory=list)
+    contents: list[Token] = field(default_factory=list)
     _tag_flag: bool = False
 
     def process_next(self, line: str) -> bool:
         """Process the next line."""
-        token: Optional[Text] = None
+        token: Optional[Token] = None
         end = False
 
         if not self.tag:
@@ -392,7 +401,7 @@ class Option(Token):
 
 
 @dataclass
-class Synopsis(Token):
+class Synopsis(ContainerToken):
     command: str
     contents: list[Token] = field(default_factory=list)
 
@@ -427,7 +436,8 @@ class Synopsis(Token):
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
         if any(isinstance(token, Synopsis) for token in self.contents):
-            return self._parse_multiple_synopsis(width), margin, indent
+            text = self._parse_multiple_synopsis(width)
+            return text, margin, indent
         return self._parse_single_synopsis(width), margin, indent
 
     def _parse_multiple_synopsis(self, width: Optional[int] = None) -> str:
@@ -444,32 +454,39 @@ class Synopsis(Token):
             synopses.append(synopsis)
 
         # Get the text for each synopsis, concatenate, and return.
-        text = synopses[0].parse(width)[0]
-        for synopsis in synopses[1:]:
-            text = f'{text}{synopsis.parse()[0]}'
-        return text
+        text = ''
+        for synopsis in synopses:
+            parsed = synopsis.parse(width)[0].rstrip()
+            text = f'{text}{parsed}\n'
+        return f'{text}\n'
 
-    def _parse_single_synopsis(self, width: Optional[int] = None) -> str:
+    def _parse_single_synopsis(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> str:
+        # Build the command label.
         term = Terminal()
-        text = f'{term.bold}{self.command}{term.normal} '
-        indent = ' ' * (len(self.command) + 1)
-        opt_width = width
-        if width is not None:
-            opt_width = width - len(indent)
-        options = ' '.join(
-            t.parse(opt_width)[0]
-            for t in self.contents
-        ).rstrip()
-        lines = term.wrap(options, opt_width)
-        text = f'{text}{lines[0]}\n'
-        for line in lines[1:]:
-            text = f'{text}{indent}{line}\n'
+        command = f'{term.bold}{self.command}{term.normal}'
+
+        # Build the options list.
+        opt_indent = len(self.command) + 1
+        options = self._parse_contents(
+            self.contents,
+            width,
+            margin,
+            opt_indent
+        )
+
+        # Build the final output and return.
+        text = f'{command} {options[opt_indent:]}\n'
         return text
 
 
 # Hyperlink and email tokens.
 @dataclass
-class EmailAddress(Token):
+class EmailAddress(ContainerToken):
     address: str
     contents: list[Token] = field(default_factory=list)
     punctuation: str = ''
@@ -503,13 +520,13 @@ class EmailAddress(Token):
         """Parse the token into text."""
         term = Terminal()
         addr = f'mailto:{self.address}'
-        text = _parse_contents(self.contents, width, '', 0).rstrip()
+        text = self._parse_contents(self.contents, None, 0, 0).rstrip()
         link = term.link(addr, text)
         return f'{link}{self.punctuation}', margin, indent
 
 
 @dataclass
-class Url(Token):
+class Url(ContainerToken):
     address: str
     contents: list[Token] = field(default_factory=list)
     punctuation: str = ''
@@ -542,9 +559,8 @@ class Url(Token):
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
         term = Terminal()
-        addr = f'{self.address}'
-        text = _parse_contents(self.contents, width, '', 0).rstrip()
-        link = term.link(addr, text)
+        text = self._parse_contents(self.contents, None, 0, 0).rstrip()
+        link = term.link(self.address, text)
         return f'{link}{self.punctuation}', margin, indent
 
 
@@ -697,12 +713,12 @@ def is_macro_type(macros: Iterable[str], line: str) -> bool:
 
 def _process_font_style_macro(
     line: str,
-    contents: Optional[list[Text]] = None
-) -> Optional[Text]:
+    contents: Optional[list[Token]] = None
+) -> Optional[Token]:
     """Process a font style macro discovered while processing a
     multiline macro.
     """
-    token: Optional[Text] = None
+    token: Optional[Token] = None
     stripped = line.rstrip()
     if (
         is_macro_type(STRUCTURE_TOKENS, stripped)
@@ -713,6 +729,7 @@ def _process_font_style_macro(
     elif (
         not stripped.startswith('.')
         and contents
+        and isinstance(contents[-1], Text)
         and not contents[-1].text
     ):
         token = contents.pop()

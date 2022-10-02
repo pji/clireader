@@ -986,7 +986,9 @@ class NewParseTokenTestCase(ut.TestCase):
         act = token.parse(self.width, margin, indent)
 
         # Determine test result.
-        self.assertTupleEqual(exp, act)
+        self.assertMultiLineEqual(exp[0], act[0])
+        self.assertEqual(exp[1], act[1])
+        self.assertEqual(exp[2], act[2])
 
     # Document structure tokens.
     def test_example(self):
@@ -1431,47 +1433,32 @@ class NewParseTokenTestCase(ut.TestCase):
         ])
         self.parse_test(exp, token)
 
-
-@ut.skip
-class ParseTokenTestCase(ut.TestCase):
-    def setUp(self):
-        self.width = 24
-
-        self.bold = '\x1b[1m'
-        self.link = '\x1b]8'
-        self.nml = '\x1b(B\x1b[m'
-        self.st = '\x1b\\'
-        self.udln = '\x1b[4m'
-
-    def parse_test(self, exp, token):
-        """Determine if parsing the given tokens returns the expected
-        result.
-        """
-        # Run test.
-        act = token.parse(self.width)
-
-        # Determine test result.
-        self.assertEqual(exp, act)
-
     # Command synopsis tokens.
     def test_option(self):
-        """Given a terminal width, Option.parse() should
-        return a string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        Option.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}]'
+        exp = (
+            f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}]',
+            0,
+            4,
+        )
         token = man.Option('-s', 'spam')
         self.parse_test(exp, token)
 
     def test_synopsis(self):
-        """Given a terminal width, Synopsis.parse() should
-        return a string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        Synopsis.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'{self.bold}spam{self.nml} '
             f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}] '
             f'[{self.bold}-e{self.nml} {self.udln}eggs{self.nml}]\n'
             f'     [{self.bold}-b{self.nml} {self.udln}bacon{self.nml}]\n'
-        )
+            '\n'
+        ), 0, 4)
         token = man.Synopsis('spam', [
             man.Option('-s', 'spam'),
             man.Option('-e', 'eggs'),
@@ -1480,20 +1467,19 @@ class ParseTokenTestCase(ut.TestCase):
         self.parse_test(exp, token)
 
     def test_synopsis_with_multiple_synopses(self):
-        """Given a terminal width, Synopsis.parse() should
-        return a string representing the object. If there are
-        multiple commands within the Synopsis, the string should
-        not contain a blank line between the end of the last
-        option of the last command and the next command.
+        """If there are multiple commands within the Synopsis, the
+        string should not contain a blank line between the end of the
+        last option of the last command and the next command.
         """
-        exp = (
+        exp = ((
             f'{self.bold}spam{self.nml} '
             f'[{self.bold}-s{self.nml} {self.udln}spam{self.nml}] '
             f'[{self.bold}-e{self.nml} {self.udln}eggs{self.nml}]\n'
             f'     [{self.bold}-b{self.nml} {self.udln}bacon{self.nml}]\n'
             f'{self.bold}ham{self.nml} '
             f'[{self.bold}-f{self.nml} {self.udln}flapjack{self.nml}]\n'
-        )
+            '\n'
+        ), 0, 4)
         token = man.Synopsis('spam', [
             man.Option('-s', 'spam'),
             man.Option('-e', 'eggs'),
@@ -1505,131 +1491,144 @@ class ParseTokenTestCase(ut.TestCase):
 
     # Hyperlink and email tokens.
     def test_email_address(self):
-        """Given a terminal width, EmailAddress.parse() should
-        return a string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        EmailAddress.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'{self.link};;mailto:spam{self.st}bacon{self.link};;{self.st}.'
+        exp = (
+            f'{self.link};;mailto:spam{self.st}bacon{self.link};;{self.st}.',
+            0,
+            4
+        )
         token = man.EmailAddress('spam', [man.Text('bacon'),], '.')
         self.parse_test(exp, token)
 
     def test_url(self):
-        """Given a terminal width, Url.parse() should
-        return a string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        Url.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'{self.link};;http://spam{self.st}bacon{self.link};;{self.st}.'
+        exp = (
+            f'{self.link};;http://spam{self.st}bacon{self.link};;{self.st}.',
+            0,
+            4
+        )
         token = man.Url('http://spam', [man.Text('bacon'),], '.')
         self.parse_test(exp, token)
 
     # Font style macros.
     def test_bold(self):
-        """Given a terminal width, Bold.parse() should return a string
-        representing the object.
+        """Given a terminal width, a margin, and an indent,
+        Bold.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'    {self.bold}spam{self.nml}\n\n'
+        exp = (f'    {self.bold}spam{self.nml}\n\n', 0, 4)
         token = man.Paragraph([man.Bold('spam'),])
         self.parse_test(exp, token)
 
     def test_italic(self):
-        """Given a terminal width, Italic.parse() should return a string
-        representing the object. The blessed package doesn't support
-        italic, so Italic uses underlines to format instead.
+        """Given a terminal width, a margin, and an indent,
+        Italic.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'    {self.udln}spam{self.nml}\n\n'
+        exp = (f'    {self.udln}spam{self.nml}\n\n', 0, 4)
         token = man.Paragraph([man.Italic('spam'),])
         self.parse_test(exp, token)
 
     def test_small(self):
-        """Given a terminal width, Small.parse() should return a string
-        representing the object. The blessed package doesn't support
-        small, so Small doesn't make any changes to the text'.
+        """Given a terminal width, a margin, and an indent,
+        Small.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'    spam\n\n'
+        exp = (f'    spam\n\n', 0, 4)
         token = man.Paragraph([man.Small('spam'),])
         self.parse_test(exp, token)
 
     def test_smallbold(self):
-        """Given a terminal width, Bold.parse() should return a string
-        representing the object. The blessed package doesn't support
-        small, so SmallBold only bolds the text.
+        """Given a terminal width, a margin, and an indent,
+        SmallBold.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = f'    {self.bold}spam{self.nml}\n\n'
+        exp = (f'    {self.bold}spam{self.nml}\n\n', 0, 4)
         token = man.Paragraph([man.SmallBold('spam'),])
         self.parse_test(exp, token)
 
     # Alternating font style macros.
     def test_bold_italic(self):
-        """Given a terminal width, BoldItalic.parse() should return a
-        string representing the object. The blessed package doesn't
-        support italic, so Italic uses underlines to format instead.
+        """Given a terminal width, a margin, and an indent,
+        BoldItalic.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    {self.bold}spam{self.nml} '
             f'{self.udln}eggs{self.nml} '
             f'{self.bold}bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.BoldItalic('spam eggs bacon'),])
         self.parse_test(exp, token)
 
     def test_bold_roman(self):
-        """Given a terminal width, BoldRoman.parse() should return a
-        string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        BoldRoman.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    {self.bold}spam{self.nml} '
             f'eggs{self.nml} '
             f'{self.bold}bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.BoldRoman('spam eggs bacon'),])
         self.parse_test(exp, token)
 
     def test_italic_bold(self):
-        """Given a terminal width, ItalicBold.parse() should return a
-        string representing the object. The blessed package doesn't
-        support italic, so Italic uses underlines to format instead.
+        """Given a terminal width, a margin, and an indent,
+        ItalicBold.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    {self.udln}spam{self.nml} '
             f'{self.bold}eggs{self.nml} '
             f'{self.udln}bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.ItalicBold('spam eggs bacon'),])
         self.parse_test(exp, token)
 
     def test_italic_roman(self):
-        """Given a terminal width, ItalicRoman.parse() should return a
-        string representing the object. The blessed package doesn't
-        support italic, so Italic uses underlines to format instead.
+        """Given a terminal width, a margin, and an indent,
+        ItalicRoman.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    {self.udln}spam{self.nml} '
             f'eggs{self.nml} '
             f'{self.udln}bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.ItalicRoman('spam eggs bacon'),])
         self.parse_test(exp, token)
 
     def test_roman_bold(self):
-        """Given a terminal width, RomanBold.parse() should return a
-        string representing the object.
+        """Given a terminal width, a margin, and an indent,
+        RomanBold.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    spam{self.nml} '
             f'{self.bold}eggs{self.nml} '
             f'bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.RomanBold('spam eggs bacon'),])
         self.parse_test(exp, token)
 
     def test_roman_italic(self):
-        """Given a terminal width, RomanItalic.parse() should return a
-        string representing the object. The blessed package doesn't
-        support italic, so Italic uses underlines to format instead.
+        """Given a terminal width, a margin, and an indent,
+        RomanItalic.parse() should return a string
+        representing the object, a margin, and an indent.
         """
-        exp = (
+        exp = ((
             f'    spam{self.nml} '
             f'{self.udln}eggs{self.nml} '
             f'bacon{self.nml}\n\n'
-        )
+        ), 0, 4)
         token = man.Paragraph([man.RomanItalic('spam eggs bacon'),])
         self.parse_test(exp, token)
 
