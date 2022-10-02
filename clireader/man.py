@@ -547,7 +547,7 @@ STRUCTURE_TOKENS: dict[str, Optional[type]] = {
     '.ee': None,
     '.ex': Example,
     '.re': RelativeIndentEnd,
-    '.ri': RelativeIndentStart,
+    '.rs': RelativeIndentStart,
     '.sh': Section,
     '.ss': Subheading,
     '.th': Title,
@@ -605,6 +605,12 @@ def _process_font_style_macro(
     token: Optional[Text] = None
     stripped = line.rstrip()
     if (
+        is_macro_type(STRUCTURE_TOKENS, stripped)
+        or is_macro_type(PARAGRAPH_TOKENS, stripped)
+        or is_macro_type(COMMAND_SYNOPSIS_TOKENS, stripped)
+    ):
+        pass
+    elif (
         not stripped.startswith('.')
         and contents
         and not contents[-1].text
@@ -634,11 +640,7 @@ def _process_font_style_macro(
         token = _build_multiline_font_style_token(SmallBold, stripped)
     elif stripped.startswith('.SM'):
         token = _build_multiline_font_style_token(Small, stripped)
-    elif (
-        not is_macro_type(STRUCTURE_TOKENS, stripped)
-        and not is_macro_type(PARAGRAPH_TOKENS, stripped)
-        and not is_macro_type(COMMAND_SYNOPSIS_TOKENS, stripped)
-    ):
+    else:
         token = Empty(stripped[1:])
     return token
 
@@ -786,21 +788,21 @@ def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
     """Parse the tokens into a string."""
     text = ''
     footer = ''
-    indent_size = 0
+    margin = 0
     for token in tokens:
         if isinstance(token, Title):
             footer = token.footer(width)
 
         if isinstance(token, RelativeIndentStart):
-            indent_size += int(token.indent)
+            margin += int(token.indent)
         elif isinstance(token, RelativeIndentEnd):
-            indent_size -= int(token.indent)
+            margin -= int(token.indent)
         elif isinstance(token, Section):
-            indent_size = 0
+            margin = 0
 
-        indent = ' ' * indent_size
+        indent = ' ' * margin
         if width is not None:
-            parsed = token.parse(width - indent_size)
+            parsed = token.parse(width - margin)
         else:
             parsed = token.parse(width)
         split = parsed.split('\n')

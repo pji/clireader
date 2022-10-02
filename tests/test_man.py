@@ -20,6 +20,31 @@ class DocumentTestCase(ut.TestCase):
         self.st = '\x1b\\'
         self.udln = '\x1b[4m'
 
+        self.indent_exp_base = (
+            '        This paragraph\n'
+            '        is indented.\n'
+            '\n'
+            '        This one proves\n'
+            '        the indentation\n'
+            '        persists.\n'
+            '\n'
+        )
+        self.indent_exp_outdent = (
+            '    The indentation is\n'
+            '    removed.\n'
+            '\n'
+            '    The indentation is\n'
+            '    still removed.\n'
+            '\n'
+        )
+        self.indent_doc_base = (
+            '.RS 4\n'
+            '.P\n'
+            'This paragraph is indented.\n'
+            '.P\n'
+            'This one proves the indentation persists.\n'
+        )
+
     def main_test(self, exp, doc):
         """Determine if the given document returns the expected text."""
         # Run test.
@@ -33,21 +58,42 @@ class DocumentTestCase(ut.TestCase):
         """Indentation from the .RS macro should persist to the
         next paragraph.
         """
+        exp = self.indent_exp_base
+        doc = self.indent_doc_base
+        self.main_test(exp, doc)
+
+    def test_re_removes_indentation(self):
+        """.RE should remove indentation from the next paragraph."""
         exp = (
-            '        This paragraph\n'
-            '        is indented.\n'
-            '\n'
-            '        This one proves\n'
-            '        the indentation\n'
-            '        persists.\n'
-            '\n'
+            f'{self.indent_exp_base}'
+            f'{self.indent_exp_outdent}'
         )
         doc = (
-            '.RS 4\n'
+            f'{self.indent_doc_base}'
+            '.RE 4\n'
+            '.P \n'
+            'The indentation is removed.\n'
             '.P\n'
+            'The indentation is still removed.\n'
+        )
+        self.main_test(exp, doc)
+
+    @ut.skip
+    def test_ip_indent_persists_until_p(self):
+        """An indent set by the .IP macro should last until a .P macro."""
+        exp = (
+            f'{self.indent_exp_base}'
+            f'{self.indent_exp_outdent}'
+        )
+        doc = (
+            '.IP  8\n'
             'This paragraph is indented.\n'
-            '.P\n'
+            '.IP\n'
             'This one proves the indentation persists.\n'
+            '.P \n'
+            'The indentation is removed.\n'
+            '.IP\n'
+            'The indentation is still removed.\n'
         )
         self.main_test(exp, doc)
 
