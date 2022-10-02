@@ -19,17 +19,27 @@ class Token:
         """Process the next line of text."""
         return True
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        return str(self)
+        return str(self), margin, indent
 
 
 @dataclass
 class NonPrinting(Token):
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        return ''
+        return '', margin, indent
 
 
 @dataclass
@@ -64,6 +74,34 @@ class MultilineFontStyleToken(Text):
     text: str = ''
 
 
+@dataclass
+class ContainerToken(Token):
+    """A superclass for tokens that contain other tokens."""
+    def _parse_contents(
+        self,
+        contents: list[Text],
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> str:
+        """Parse the text tokens of the token."""
+        # Remove pre-existing hard wrapping.
+        lines = [token.parse(width)[0].rstrip() for token in contents]
+        paragraph = ' '.join(line for line in lines)
+
+        # Wrap the text for the width, margin, and indent.
+        wrapped = [paragraph,]
+        if width is not None:
+            term = Terminal()
+            wrap_width = width - margin - indent
+            wrapped = term.wrap(paragraph, wrap_width)
+
+        # Add indentation and return.
+        lead = ' ' * (margin + indent)
+        text = '\n'.join(f'{lead}{line}' for line in wrapped)
+        return f'{text}\n'
+
+
 # Document structure tokens.
 @dataclass
 class Example(Token):
@@ -78,12 +116,17 @@ class Example(Token):
         self.contents.append(token)
         return False
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         text = f'{self.contents[0].text[:width]}\n'
         for token in self.contents[1:]:
             text = f'{text}{token.text[:width]}\n'
-        return text
+        return text, margin, indent
 
 
 @dataclass
@@ -115,28 +158,33 @@ class Section(Token):
             return False
         return True
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         term = Terminal()
         text = f'{term.bold}{self.heading_text}{term.normal}'
         if not any(isinstance(token, Synopsis) for token in self.contents):
             contents = _parse_contents(self.contents, width, '', 4)
-            return f'{text}\n{contents}\n'
+            return f'{text}\n{contents[0]}\n', margin, indent
         else:
             content_width = width
             if content_width is not None:
                 content_width -= 4
-            synopses = (t.parse(content_width) for t in self.contents)
-            indent = ' ' * 4
+            synopses = (t.parse(content_width)[0] for t in self.contents)
+            lead = ' ' * 4
             lines = []
             for synopsis in synopses:
                 lines.extend(synopsis.split('\n'))
             for line in lines:
                 if line:
-                    text = f'{text}\n{indent}{line}'
+                    text = f'{text}\n{lead}{line}'
                 else:
                     text = f'{text}\n'
-        return f'{text}\n'
+        return f'{text}\n', margin, indent
 
 
 @dataclass
@@ -158,12 +206,17 @@ class Subheading(Token):
             return False
         return True
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         term = Terminal()
         text = f'  {term.bold}{self.subheading_text}{term.normal}\n'
         text = _parse_contents(self.contents, width, text)
-        return f'{text}\n'
+        return f'{text}\n', margin, indent
 
 
 @dataclass
@@ -192,7 +245,12 @@ class Title(Token):
         text = f'\n\n\n{l_text}{l_gap}{m_text}{r_gap}{r_text}\n'
         return text
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         title = str(self)
         total_text = len(title) * 2 + len(self.header_middle)
         if width is None:
@@ -201,40 +259,12 @@ class Title(Token):
         l_gap = ' ' * (total_gap // 2)
         r_gap = ' ' * (-(-total_gap // 2))
         text = f'{title}{l_gap}{self.header_middle}{r_gap}{title}\n\n\n\n'
-        return text
+        return text, margin, indent
 
 
 # Paragraph tokens.
 @dataclass
-class IndentedParagraph(Token):
-    tag: str = ''
-    indent: str = '4'
-    contents: list[Text] = field(default_factory=list)
-
-    def process_next(self, line: str) -> bool:
-        """Process the next line."""
-        if not line:
-            return False
-        token: Optional[Text] = _process_font_style_macro(line)
-        if token:
-            self.contents.append(token)
-            return False
-        return True
-
-    def parse(self, width: Optional[int] = None) -> str:
-        """Parse the token into text."""
-        term = Terminal()
-        indent = int(self.indent)
-        contents = _parse_contents(self.contents, width, '', indent)
-        if len(self.tag) < int(self.indent):
-            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
-        else:
-            text = f'{self.tag}\n{contents}\n'
-        return text
-
-
-@dataclass
-class Paragraph(Token):
+class Paragraph(ContainerToken):
     contents: list[Text] = field(default_factory=list)
 
     def process_next(self, line: str) -> bool:
@@ -247,14 +277,60 @@ class Paragraph(Token):
             return False
         return True
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        parsed = _parse_contents(self.contents, width)
-        return f'{parsed}\n'
+        indent = 4
+        parsed = self._parse_contents(self.contents, width, margin, indent)
+        return f'{parsed}\n', margin, indent
 
 
 @dataclass
-class TaggedParagraph(Token):
+class IndentedParagraph(ContainerToken):
+    tag: str = ''
+    indent: str = ''
+    contents: list[Text] = field(default_factory=list)
+
+    def process_next(self, line: str) -> bool:
+        """Process the next line."""
+        if not line:
+            return False
+        token: Optional[Text] = _process_font_style_macro(line)
+        if token:
+            self.contents.append(token)
+            return False
+        return True
+
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
+        """Parse the token into text."""
+        # .IP doesn't change the margin, but it will change the indent.
+        if self.indent:
+            indent = int(self.indent)
+
+        # Build the paragraph.
+        contents = self._parse_contents(self.contents, width, margin, indent)
+
+        # If the paragraph is tagged, add the tag.
+        if len(self.tag) < indent:
+            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
+        else:
+            text = f'{self.tag}\n{contents}\n'
+
+        # Return the text, margin, and new indent.
+        return text, margin, indent
+
+
+@dataclass
+class TaggedParagraph(ContainerToken):
     indent: str = '4'
     tag: list[str] = field(default_factory=list)
     contents: list[Text] = field(default_factory=list)
@@ -281,16 +357,28 @@ class TaggedParagraph(Token):
             self.contents.append(token)
         return end
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        term = Terminal()
-        indent = int(self.indent)
-        contents = _parse_contents(self.contents, width, '', indent)
-        if len(self.tag) < int(self.indent):
-            text = f'{self.tag: <{indent}}{contents[indent:]}\n'
+        # .IP doesn't change the margin, but it will change the indent.
+        if self.indent:
+            indent = int(self.indent)
+
+        # Build the paragraph.
+        contents = self._parse_contents(self.contents, width, margin, indent)
+
+        # If the paragraph is tagged, add the tag.
+        if len(self.tag) == 1 and len(self.tag[0]) < indent:
+            text = f'{self.tag[0]: <{indent}}{contents[indent:]}\n'
         else:
-            text = f'{self.tag}\n{contents}\n'
-        return text
+            text = f'{self.tag[0]}\n{contents}\n'
+
+        # Return the text, margin, and new indent.
+        return text, margin, indent
 
 
 # Command synopsis tokens.
@@ -337,11 +425,16 @@ class Synopsis(Token):
 
         return False
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         if any(isinstance(token, Synopsis) for token in self.contents):
-            return self._parse_multiple_synopsis(width)
-        return self._parse_single_synopsis(width)
+            return self._parse_multiple_synopsis(width), margin, indent
+        return self._parse_single_synopsis(width), margin, indent
 
     def _parse_multiple_synopsis(self, width: Optional[int] = None) -> str:
         # Split contents into multiple synopses.
@@ -357,9 +450,9 @@ class Synopsis(Token):
             synopses.append(synopsis)
 
         # Get the text for each synopsis, concatenate, and return.
-        text = synopses[0].parse(width)
+        text = synopses[0].parse(width)[0]
         for synopsis in synopses[1:]:
-            text = f'{text}{synopsis.parse()}'
+            text = f'{text}{synopsis.parse()[0]}'
         return text
 
     def _parse_single_synopsis(self, width: Optional[int] = None) -> str:
@@ -369,7 +462,10 @@ class Synopsis(Token):
         opt_width = width
         if width is not None:
             opt_width = width - len(indent)
-        options = ' '.join(t.parse(opt_width) for t in self.contents).rstrip()
+        options = ' '.join(
+            t.parse(opt_width)[0]
+            for t in self.contents
+        ).rstrip()
         lines = term.wrap(options, opt_width)
         text = f'{text}{lines[0]}\n'
         for line in lines[1:]:
@@ -404,13 +500,18 @@ class EmailAddress(Token):
 
         return False
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         term = Terminal()
         addr = f'mailto:{self.address}'
         text = _parse_contents(self.contents, width, '', 0).rstrip()
         link = term.link(addr, text)
-        return f'{link}{self.punctuation}'
+        return f'{link}{self.punctuation}', margin, indent
 
 
 @dataclass
@@ -439,13 +540,18 @@ class Url(Token):
 
         return False
 
-    def parse(self, width: Optional[int] = None) -> str:
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
         """Parse the token into text."""
         term = Terminal()
         addr = f'{self.address}'
         text = _parse_contents(self.contents, width, '', 0).rstrip()
         link = term.link(addr, text)
-        return f'{link}{self.punctuation}'
+        return f'{link}{self.punctuation}', margin, indent
 
 
 # Font style macros.
@@ -769,7 +875,7 @@ def _parse_contents(
     term = Terminal()
 
     # Remove pre-existing hard wrapping.
-    lines = [token.parse(width).rstrip() for token in contents]
+    lines = [token.parse(width)[0].rstrip() for token in contents]
     paragraph = ' '.join(line for line in lines)
 
     # Wrap the text for the given terminal width.
@@ -802,9 +908,9 @@ def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
 
         indent = ' ' * margin
         if width is not None:
-            parsed = token.parse(width - margin)
+            parsed = token.parse(width - margin)[0]
         else:
-            parsed = token.parse(width)
+            parsed = token.parse(width)[0]
         split = parsed.split('\n')
         indented = [f'{indent}{line}'.rstrip() for line in split]
         joined = '\n'.join(indented)
