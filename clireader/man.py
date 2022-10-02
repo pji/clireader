@@ -123,9 +123,13 @@ class Example(Token):
         indent: int = 4
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        text = f'{self.contents[0].text[:width]}\n'
+        act_width = width
+        if width is not None:
+            act_width = width - margin - indent
+        lead = ' ' * (margin + indent)
+        text = f'{lead}{self.contents[0].text[:act_width]}\n'
         for token in self.contents[1:]:
-            text = f'{text}{token.text[:width]}\n'
+            text = f'{text}{lead}{token.text[:act_width]}\n'
         return text, margin, indent
 
 
@@ -140,7 +144,7 @@ class RelativeIndentStart(NonPrinting):
 
 
 @dataclass
-class Section(Token):
+class Section(ContainerToken):
     heading_text: str = ''
     contents: list[Text] = field(default_factory=list)
 
@@ -165,30 +169,17 @@ class Section(Token):
         indent: int = 4
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
+        margin = 0
+        indent = 4
         term = Terminal()
-        text = f'{term.bold}{self.heading_text}{term.normal}'
-        if not any(isinstance(token, Synopsis) for token in self.contents):
-            contents = _parse_contents(self.contents, width, '', 4)
-            return f'{text}\n{contents[0]}\n', margin, indent
-        else:
-            content_width = width
-            if content_width is not None:
-                content_width -= 4
-            synopses = (t.parse(content_width)[0] for t in self.contents)
-            lead = ' ' * 4
-            lines = []
-            for synopsis in synopses:
-                lines.extend(synopsis.split('\n'))
-            for line in lines:
-                if line:
-                    text = f'{text}\n{lead}{line}'
-                else:
-                    text = f'{text}\n'
-        return f'{text}\n', margin, indent
+        header = f'{term.bold}{self.heading_text}{term.normal}\n'
+        contents = self._parse_contents(self.contents, width, margin, indent)
+        text = f'{header}{contents}\n'
+        return text, margin, indent
 
 
 @dataclass
-class Subheading(Token):
+class Subheading(ContainerToken):
     subheading_text: str = ''
     contents: list[Text] = field(default_factory=list)
 
@@ -213,9 +204,12 @@ class Subheading(Token):
         indent: int = 4
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
+        margin = 0
+        indent = 4
         term = Terminal()
-        text = f'  {term.bold}{self.subheading_text}{term.normal}\n'
-        text = _parse_contents(self.contents, width, text)
+        head = f'  {term.bold}{self.subheading_text}{term.normal}\n'
+        contents = self._parse_contents(self.contents, width, margin, indent)
+        text = f'{head}{contents}'
         return f'{text}\n', margin, indent
 
 

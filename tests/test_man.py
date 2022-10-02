@@ -988,6 +988,184 @@ class NewParseTokenTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
+    # Document structure tokens.
+    def test_example(self):
+        """Given a terminal width, a margin, and an indent,
+        Section.parse() should return a string representing
+        the object, a margin, and an indent. Since filling is disabled,
+        the contents are not reflowed for the given width but are
+        instead truncated.
+        """
+        exp = ((
+            '    spam eggs bacon ham \n'
+            '    spam\n'
+            '    spam eggs\n'
+            '    spam eggs bacon ham \n'
+        ), 1, 3)
+        token = man.Example([
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        margin = exp[1]
+        indent = exp[2]
+        self.parse_test(exp, token, margin, indent)
+
+    def test_section(self):
+        """Given a terminal width, a margin, and an indent,
+        Section.parse() should return a string representing
+        the object, a margin, and an indent.
+        """
+        exp = ((
+            f'{self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Section('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_section_resets_indent(self):
+        """If the Section.parse() is given an indent that is different
+        than the default indent, the Section indents to the default
+        amount and returns the default amount.
+        """
+        exp = ((
+            f'{self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Section('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        margin = 0
+        indent = 8
+        self.parse_test(exp, token, margin, indent)
+
+    def test_section_resets_margin(self):
+        """If the Section.parse() is given an margin that is different
+        than the default margin, the Section indents to the default
+        amount and returns the default amount.
+        """
+        exp = ((
+            f'{self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Section('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        margin = 4
+        indent = 4
+        self.parse_test(exp, token, margin, indent)
+
+    def test_subheading(self):
+        """Given a terminal width, a margin, and an indent,
+        Subheading.parse() should return a string representing
+        the object, a margin, and an indent.
+        """
+        exp = ((
+            f'  {self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Subheading('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_section_resets_indent(self):
+        """If the Subheading.parse() is given an indent that is different
+        than the default indent, the Subheading indents to the default
+        amount and returns the default amount.
+        """
+        exp = ((
+            f'  {self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Subheading('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        margin = 0
+        indent = 8
+        self.parse_test(exp, token, margin, indent)
+
+    def test_section_resets_margin(self):
+        """If the Subheading.parse() is given an margin that is different
+        than the default margin, the Subheading indents to the default
+        amount and returns the default amount.
+        """
+        exp = ((
+            f'  {self.bold}spam{self.nml}\n'
+            '    spam eggs bacon ham\n'
+            '    baked beans spam\n'
+            '    spam eggs spam eggs\n'
+            '    bacon ham baked\n'
+            '    beans tomato\n'
+            '\n'
+        ), 0, 4)
+        token = man.Subheading('spam', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        margin = 4
+        indent = 4
+        self.parse_test(exp, token, margin, indent)
+
+    def test_title(self):
+        """Given a terminal width, a margin, and an indent,
+        Title.parse() should return a string representing
+        the object, a margin, and an indent.
+        """
+        exp = ((
+            'SPAM(1)  bacon   SPAM(1)\n'
+            '\n'
+            '\n'
+            '\n'
+        ), 0, 4)
+        token = man.Title('spam', '1', '1/1/70', 'ham', 'bacon')
+        self.parse_test(exp, token)
+
     # Test paragraph tokens.
     def test_indented_paragraph(self):
         """Given a terminal width, a margin, and an indent,
@@ -1274,69 +1452,6 @@ class ParseTokenTestCase(ut.TestCase):
 
         # Determine test result.
         self.assertEqual(exp, act)
-
-    # Document structure tokens.
-    def test_example(self):
-        """Given a terminal width, Example.parse() should return a
-        string representing the object. Since filling is disabled,
-        the contents are not reflowed for the given width but are
-        instead truncated.
-        """
-        exp = (
-            'spam eggs bacon ham bake\n'
-            'spam\n'
-            'spam eggs\n'
-            'spam eggs bacon ham bake\n'
-        )
-        token = man.Example([
-            man.Text('spam eggs bacon ham baked beans'),
-            man.Text('spam'),
-            man.Text('spam eggs'),
-            man.Text('spam eggs bacon ham baked beans tomato'),
-        ])
-        self.parse_test(exp, token)
-
-    def test_section(self):
-        """Given a terminal width, Section.parse() should return a
-        string representing the object.
-        """
-        exp = (
-            f'{self.bold}spam{self.nml}\n'
-            '    spam eggs bacon ham\n'
-            '    baked beans spam\n'
-            '    spam eggs spam eggs\n'
-            '    bacon ham baked\n'
-            '    beans tomato\n'
-            '\n'
-        )
-        token = man.Section('spam', [
-            man.Text('spam eggs bacon ham baked beans'),
-            man.Text('spam'),
-            man.Text('spam eggs'),
-            man.Text('spam eggs bacon ham baked beans tomato'),
-        ])
-        self.parse_test(exp, token)
-
-    def test_subheading(self):
-        """Given a terminal width, Subheading.parse() should return
-        a string representing the object.
-        """
-        exp = (
-            f'  {self.bold}spam{self.nml}\n'
-            '    spam eggs bacon ham\n'
-            '    baked beans spam\n'
-            '    spam eggs spam eggs\n'
-            '    bacon ham baked\n'
-            '    beans tomato\n'
-            '\n'
-        )
-        token = man.Subheading('spam', [
-            man.Text('spam eggs bacon ham baked beans'),
-            man.Text('spam'),
-            man.Text('spam eggs'),
-            man.Text('spam eggs bacon ham baked beans tomato'),
-        ])
-        self.parse_test(exp, token)
 
     # Command synopsis tokens.
     def test_option(self):
