@@ -403,11 +403,14 @@ class TaggedParagraph(ContainerToken):
 
         # If the paragraph is tagged, add the tag.
         lead = ' ' * margin
-        if len(self.tag) == 1 and len(self.tag[0]) < indent:
+        tags = ''
+        for tag in self.tag[:-1]:
+            tags += f'{lead}{tag}\n'
+        if len(self.tag) >= 1 and len(self.tag[-1]) < indent:
             gap = margin + indent
-            text = f'{lead}{self.tag[0]: <{indent}}{contents[gap:]}\n'
+            text = f'{tags}{lead}{self.tag[-1]: <{indent}}{contents[gap:]}\n'
         else:
-            text = f'{lead}{self.tag[0]}\n{contents}\n'
+            text = f'{tags}{lead}{self.tag[-1]}\n{contents}\n'
 
         # Return the text, margin, and new indent.
         return text, margin, indent

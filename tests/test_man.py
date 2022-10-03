@@ -1449,7 +1449,33 @@ class ParseTokenTestCase(ut.TestCase):
             0,
             4,
         )
-        token = man.TaggedParagraph('4', '*', [
+        token = man.TaggedParagraph('4', ['*',], [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
+    def test_tagged_paragraph_with_multiple_tags(self):
+        """If the TaggedParagraph has multiple tags, they are printed
+        on separate lines at the margin.
+        """
+        exp = (
+            (
+                '+\n'
+                '$\n'
+                '*   spam eggs bacon ham\n'
+                '    baked beans spam\n'
+                '    spam eggs spam eggs\n'
+                '    bacon ham baked\n'
+                '    beans tomato\n'
+                '\n'
+            ),
+            0,
+            4,
+        )
+        token = man.TaggedParagraph('4', ['+', '$', '*'], [
             man.Text('spam eggs bacon ham baked beans'),
             man.Text('spam'),
             man.Text('spam eggs'),
