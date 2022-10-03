@@ -96,6 +96,33 @@ class DocumentTestCase(ut.TestCase):
         )
         self.main_test(exp, doc)
 
+    def test_tp_indent_persists_until_p(self):
+        """An indent set by the .TP macro should last until a .P macro."""
+        exp = (
+            'Spam    This paragraph\n'
+            '        is indented.\n'
+            '\n'
+            'Eggs    This one proves\n'
+            '        the indentation\n'
+            '        persists.\n'
+            '\n'
+            f'{self.indent_exp_outdent}'
+        )
+        doc = (
+            '.TP 8\n'
+            'Spam\n'
+            'This paragraph is indented.\n'
+            '.TP\n'
+            'Eggs\n'
+            'This one proves the indentation persists.\n'
+            '.P \n'
+            'The indentation is removed.\n'
+            '.TP\n'
+            '\n'
+            'The indentation is still removed.\n'
+        )
+        self.main_test(exp, doc)
+
 
 class LexTestCase(ut.TestCase):
     def lex_test(self, exp, text):

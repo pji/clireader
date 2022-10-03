@@ -146,10 +146,26 @@ class Example(Token):
 class RelativeIndentEnd(NonPrinting):
     indent: str = '1'
 
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
+        return '', margin - int(self.indent), indent
+
 
 @dataclass
 class RelativeIndentStart(NonPrinting):
     indent: str = '1'
+
+    def parse(
+        self,
+        width: Optional[int] = None,
+        margin: int = 0,
+        indent: int = 4
+    ) -> tuple[str, int, int]:
+        return '', margin + int(self.indent), indent
 
 
 @dataclass
@@ -345,7 +361,7 @@ class IndentedParagraph(ContainerToken):
 
 @dataclass
 class TaggedParagraph(ContainerToken):
-    indent: str = '4'
+    indent: str = ''
     tag: list[str] = field(default_factory=list)
     contents: list[Token] = field(default_factory=list)
     _tag_flag: bool = False
@@ -378,7 +394,7 @@ class TaggedParagraph(ContainerToken):
         indent: int = 4
     ) -> tuple[str, int, int]:
         """Parse the token into text."""
-        # .IP doesn't change the margin, but it will change the indent.
+        # .TP doesn't change the margin, but it will change the indent.
         if self.indent:
             indent = int(self.indent)
 
@@ -902,15 +918,10 @@ def parse(tokens: Sequence[Token], width: Optional[int] = 80) -> str:
     footer = ''
     margin = 0
     indent = 4
+
     for token in tokens:
         if isinstance(token, Title):
             footer = token.footer(width)
-
-        if isinstance(token, RelativeIndentStart):
-            margin += int(token.indent)
-        elif isinstance(token, RelativeIndentEnd):
-            margin -= int(token.indent)
-
         parsed, margin, indent = token.parse(width, margin, indent)
         text += parsed
 
