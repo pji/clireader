@@ -54,30 +54,6 @@ class DocumentTestCase(ut.TestCase):
         self.assertEqual(exp, act)
 
     # Indentation tests.
-    def test_rs_indentation_persists(self):
-        """Indentation from the .RS macro should persist to the
-        next paragraph.
-        """
-        exp = self.indent_exp_base
-        doc = self.indent_doc_base
-        self.main_test(exp, doc)
-
-    def test_re_removes_indentation(self):
-        """.RE should remove indentation from the next paragraph."""
-        exp = (
-            f'{self.indent_exp_base}'
-            f'{self.indent_exp_outdent}'
-        )
-        doc = (
-            f'{self.indent_doc_base}'
-            '.RE 4\n'
-            '.P \n'
-            'The indentation is removed.\n'
-            '.P\n'
-            'The indentation is still removed.\n'
-        )
-        self.main_test(exp, doc)
-
     def test_ip_indent_persists_until_p(self):
         """An indent set by the .IP macro should last until a .P macro."""
         exp = (
@@ -92,6 +68,62 @@ class DocumentTestCase(ut.TestCase):
             '.P \n'
             'The indentation is removed.\n'
             '.IP\n'
+            'The indentation is still removed.\n'
+        )
+        self.main_test(exp, doc)
+
+    def test_rs_margin_persists(self):
+        """Indentation from the .RS macro should persist to the
+        next paragraph.
+        """
+        exp = self.indent_exp_base
+        doc = self.indent_doc_base
+        self.main_test(exp, doc)
+
+    def test_re_changes_margin(self):
+        """.RE should reduce indentation from the next paragraph."""
+        exp = (
+            f'{self.indent_exp_base}'
+            f'{self.indent_exp_outdent}'
+        )
+        doc = (
+            f'{self.indent_doc_base}'
+            '.RE 4\n'
+            '.P \n'
+            'The indentation is removed.\n'
+            '.P\n'
+            'The indentation is still removed.\n'
+        )
+        self.main_test(exp, doc)
+
+    def test_sh_removes_margin(self):
+        """.SH should reset the margin location."""
+        exp = (
+            f'{self.indent_exp_base}'
+            f'{self.bold}SPAM{self.nml}\n'
+            f'{self.indent_exp_outdent}'
+        )
+        doc = (
+            f'{self.indent_doc_base}'
+            '.SH SPAM\n'
+            'The indentation is removed.\n'
+            '.P\n'
+            'The indentation is still removed.\n'
+        )
+        self.main_test(exp, doc)
+
+    def test_ss_removes_margin(self):
+        """.SS should reset the margin location."""
+        exp = (
+            f'{self.indent_exp_base}'
+            f'  {self.bold}SPAM{self.nml}\n'
+            f'{self.indent_exp_outdent}'
+        )
+        doc = (
+            f'{self.indent_doc_base}'
+            '.SS SPAM\n'
+            'The indentation is removed.\n'
+            '.P\n'
             'The indentation is still removed.\n'
         )
         self.main_test(exp, doc)
@@ -199,8 +231,18 @@ class LexTestCase(ut.TestCase):
         parameter on the next line, the Lexer should return the correct
         token.
         """
-        exp = (man.Section('spam'),)
-        text = f'.SH\n{exp[0].heading_text}'
+        exp = (man.Section(
+            'spam',
+            [
+                man.Text('eggs bacon'),
+                man.Text('ham baked beans'),
+            ]
+        ),)
+        text = (
+            f'.SH {exp[0].heading_text}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
+        )
         self.lex_test(exp, text)
 
     def test_section_with_following_text(self):
@@ -227,8 +269,18 @@ class LexTestCase(ut.TestCase):
         """When encountering a title header macro (.TH) and up to
         five parameters, the Lexer should return the correct token.
         """
-        exp = (man.Subheading('spam'),)
-        text = f'.SS {exp[0].subheading_text}'
+        exp = (man.Subheading(
+            'spam',
+            [
+                man.Text('eggs bacon'),
+                man.Text('ham baked beans'),
+            ]
+        ),)
+        text = (
+            f'.SS {exp[0].subheading_text}\n'
+            f'{exp[0].contents[0].text}\n'
+            f'{exp[0].contents[1].text}\n'
+        )
         self.lex_test(exp, text)
 
     def test_subheading_with_following_text(self):

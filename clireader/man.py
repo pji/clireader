@@ -176,11 +176,19 @@ class Section(ContainerToken):
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
         stripped = line.rstrip()
+
+        # If a heading wasn't given as a parameter of the macro, the
+        # first line of text after the macro is the heading.
         if not self.heading_text:
             self.heading_text = stripped
             return False
+
+        # Weed out blank lines.
         if not stripped:
             return False
+
+        # Once there is a header, the next lines are the contents of
+        # the first paragraph of the section.
         token: Optional[Token] = _process_font_style_macro(
             line,
             self.contents
@@ -188,6 +196,8 @@ class Section(ContainerToken):
         if token:
             self.contents.append(token)
             return False
+
+        # If it wasn't the head or contents, then close the macro.
         return True
 
     def parse(
@@ -214,11 +224,19 @@ class Subheading(ContainerToken):
     def process_next(self, line: str) -> bool:
         """Process the next line of text."""
         stripped = line.rstrip()
+
+        # If a heading wasn't given as a parameter of the macro, the
+        # first line of text after the macro is the heading.
         if not self.subheading_text:
             self.subheading_text = stripped
             return False
+
+        # Weed out blank lines.
         if not stripped:
             return False
+
+        # Once there is a header, the next lines are the contents of
+        # the first paragraph of the section.
         token: Optional[Token] = _process_font_style_macro(
             line,
             self.contents
@@ -226,6 +244,8 @@ class Subheading(ContainerToken):
         if token:
             self.contents.append(token)
             return False
+
+        # If it wasn't the head or contents, then close the macro.
         return True
 
     def parse(
@@ -864,14 +884,14 @@ def lex(text: str) -> tuple[Token, ...]:
         elif line.startswith('.SH'):
             args = line.split(' ', 1)
             if len(args) > 1:
-                token = Section(args[1])
+                state = Section(args[1])
             else:
                 state = Section()
 
         elif line.startswith('.SS'):
             args = line.split(' ', 1)
             if len(args) > 1:
-                token = Subheading(args[1])
+                state = Subheading(args[1])
             else:
                 state = Subheading()
 
