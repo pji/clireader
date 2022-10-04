@@ -1733,5 +1733,3 @@ class ParseTokenTestCase(ut.TestCase):
         ), 0, 4)
         token = man.Paragraph([man.RomanItalic('spam eggs bacon'),])
         self.parse_test(exp, token)
-
-#           '012345678901234567890123'
