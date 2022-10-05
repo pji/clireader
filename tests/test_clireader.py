@@ -799,6 +799,50 @@ class PagerTestCase(ut.TestCase):
         # Determine test result.
         self.assertTupleEqual(exp, act)
 
+    def test_man_pagination(self):
+        """When called with mode set to 'man', Pager.pages should
+        return the text formatted and paginated using the manlike
+        macros.
+        """
+        # Expected value.
+        exp = (
+            (
+                'SPAM                SPAM',
+                '',
+                '',
+            ),
+            (
+                '    eggs',
+                '',
+                '',
+            ),
+            (
+                '                    SPAM',
+            ),
+        )
+
+        # Test data and state.
+        height = len(exp[0])
+        width = 24
+        wrap_mode = 'man'
+        text = (
+            '.TH SPAM\n'
+            '.P\n'
+            'eggs\n'
+        )
+        pager = clireader.Pager(
+            text,
+            height=height,
+            width=width,
+            wrap_mode=wrap_mode
+        )
+
+        # Run test.
+        act = pager.pages
+
+        # Determine test result.
+        self.assertTupleEqual(exp, act)
+
     def test_no_wrap_pagination_with_long_line(self):
         """When called with mode set to 'no_wrap', Pager.pages should
         return the text paginated with any long lines truncated to the

@@ -13,6 +13,8 @@ from typing import Generator, NamedTuple, Optional, Sequence
 from blessed import Terminal
 from blessed.keyboard import Keystroke
 
+from clireader import man
+
 
 # Utility classes.
 class Box:
@@ -169,6 +171,8 @@ class Pager:
             wrapped = self._detect()
         elif self.wrap_mode == 'long':
             wrapped = self._long()
+        elif self.wrap_mode == 'man':
+            wrapped = self._man()
         elif self.wrap_mode == 'no_wrap':
             wrapped = self._no_wrap()
 
@@ -255,6 +259,11 @@ class Pager:
                 wline = wrap(line, self.width)
                 wrapped.extend(wline)
         return tuple(wrapped)
+
+    def _man(self) -> tuple[str, ...]:
+        wrapped = man.main(self.text, width=self.width)
+        split = wrapped.split('\n')
+        return tuple(split)
 
     def _no_wrap(self) -> tuple[str, ...]:
         wrapped = self.text.split('\n')

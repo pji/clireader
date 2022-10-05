@@ -1,0 +1,41 @@
+.TH Manlike_Formatting
+.SH PURPOSE
+The purpose of this document is to explain how macros similar to the
+groff macros used to format man pages can be used to format pages for
+clireader.
+
+.P
+.B Note:
+Clireader is not a full implementation of groff. It doesn't even fully
+implement all the macros available for formatting manpages. It's just a
+quick way to do some formatting that's available to manpages, like have
+bold text and hyperlink, without having to type terminal escape
+sequences into your text file.
+
+.SH
+AVAILABLE MACROS
+The following macros are available for use in manlike documents.
+
+.SS
+Document Structure Macros
+.RE 4
+.TP
+\.TH title [section] [footer-middle] [footer-inside] [footer-outside]
+Define the title of the document. The
+.I title
+parameter sets the title of the document. The
+.I section
+optional parameter sets the section of the manual volume, which is only
+useful if you are actually making manpages. The
+.I footer-*
+parameters set the text at the bottom of the document:
+.I middle
+centers the text,
+.I inside
+left-aligns it, and
+.I outside
+right-aligns it.
+
+.IP
+Each manlike page should start with a .TH macro, but it's not strictly
+required.
