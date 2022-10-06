@@ -18,7 +18,8 @@ The following macros are available for use in manlike documents.
 
 .SS
 Document Structure Macros
-.RE 4
+These macros structure the document.
+.RS 4
 .TP
 \.TH title [section] [footer-middle] [footer-inside] [footer-outside]
 Define the title of the document. The

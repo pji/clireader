@@ -28,6 +28,15 @@ class Token:
         """Parse the token into text."""
         return str(self), margin, indent
 
+    def _parse_escapes(self, text: str) -> str:
+        """Transform escape sequences into their character equivalents."""
+        if '\\' not in text:
+            return text
+
+        text = text.replace('\\.', '.')
+        text = text.replace('\\\\', '\\')
+        return text
+
 
 @dataclass
 class NonPrinting(Token):
@@ -47,7 +56,7 @@ class Text(Token):
     text: str
 
     def __str__(self) -> str:
-        return f'{self.text}'
+        return self._parse_escapes(self.text)
 
 
 @dataclass
@@ -368,12 +377,13 @@ class IndentedParagraph(ContainerToken):
         contents = self._parse_contents(self.contents, width, margin, indent)
 
         # If the paragraph is tagged, add the tag.
+        tag = self._parse_escapes(self.tag)
         lead = ' ' * margin
         if len(self.tag) < indent:
             gap = margin + indent
-            text = f'{lead}{self.tag: <{indent}}{contents[gap:]}\n'
+            text = f'{lead}{tag: <{indent}}{contents[gap:]}\n'
         else:
-            text = f'{lead}{self.tag}\n{contents}\n'
+            text = f'{lead}{tag}\n{contents}\n'
 
         # Return the text, margin, and new indent.
         return text, margin, indent
@@ -421,16 +431,21 @@ class TaggedParagraph(ContainerToken):
         # Build the paragraph.
         contents = self._parse_contents(self.contents, width, margin, indent)
 
-        # If the paragraph is tagged, add the tag.
+        # If the paragraph has multiple tags, add all tags but the
+        # last one.
+        parsed_tags = [self._parse_escapes(tag) for tag in self.tag]
         lead = ' ' * margin
         tags = ''
-        for tag in self.tag[:-1]:
+        for tag in parsed_tags[:-1]:
             tags += f'{lead}{tag}\n'
-        if len(self.tag) >= 1 and len(self.tag[-1]) < indent:
+
+        # Add the last or only tag.
+        tag = parsed_tags[-1]
+        if len(parsed_tags) >= 1 and len(tag) < indent:
             gap = margin + indent
-            text = f'{tags}{lead}{self.tag[-1]: <{indent}}{contents[gap:]}\n'
+            text = f'{tags}{lead}{tag: <{indent}}{contents[gap:]}\n'
         else:
-            text = f'{tags}{lead}{self.tag[-1]}\n{contents}\n'
+            text = f'{tags}{lead}{tag}\n{contents}\n'
 
         # Return the text, margin, and new indent.
         return text, margin, indent

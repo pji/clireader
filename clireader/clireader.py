@@ -352,6 +352,7 @@ class Viewer:
         :return: None.
         :rtype: NoneType
         """
+        x = 1
         for i, command in enumerate(commands):
             # Create the command hint.
             frame = Box(frame_type)
@@ -366,8 +367,8 @@ class Viewer:
 
             # Print the command.
             y = self.term.height - 1
-            x = i * len(hint) + 1
             print(self.term.move(y, x) + hint, end='', flush=True)
+            x += len(hint)
 
     def draw_page(self, text: Sequence[str]) -> None:
         """Draw the text for the page.
@@ -520,6 +521,7 @@ def flow(viewer: Viewer, pager: Pager, page: int) -> int:
     mode_list = [
         Command('n', 'none'),
         Command('d', 'detect'),
+        Command('m', 'man'),
     ]
     viewer.draw_frame()
     viewer.draw_status(
@@ -534,6 +536,8 @@ def flow(viewer: Viewer, pager: Pager, page: int) -> int:
     wrap_mode = 'detect'
     if key == 'n':
         wrap_mode = 'no_wrap'
+    elif key == 'm':
+        wrap_mode = 'man'
     pager.reflow(wrap_mode)
     return update_page(viewer, pager, 0)
 

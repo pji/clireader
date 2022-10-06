@@ -303,7 +303,12 @@ class MainTestCase(TerminalTestCase):
                 flush=True
             ),
             call(
-                self.loc.format(8, 10) + '┤Detect├',
+                self.loc.format(8, 8) + '┤Detect├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 16) + '┤Man├',
                 end='',
                 flush=True
             ),

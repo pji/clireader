@@ -1044,6 +1044,49 @@ class ParseTestCase(ut.TestCase):
         self.parse_test(exp, tokens)
 
 
+class EscapedTextTestCase(ut.TestCase):
+    def setUp(self):
+        self.width = 24
+
+        self.bold = '\x1b[1m'
+        self.link = '\x1b]8'
+        self.nml = '\x1b(B\x1b[m'
+        self.st = '\x1b\\'
+        self.udln = '\x1b[4m'
+
+    def test_escaped_period(self):
+        """A backslash followed by a period should be rendered as a
+        period.
+        """
+        # Expected value.
+        exp = ('.TH', 0, 4)
+
+        # Test data and state.
+        token = man.Text(r'\.TH')
+
+        # Run test.
+        act = token.parse(self.width)
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+    def test_escaped_backslash(self):
+        """A backslash followed by a backslash should be rendered as a
+        single backslash.
+        """
+        # Expected value.
+        exp = (r'\TH', 0, 4)
+
+        # Test data and state.
+        token = man.Text(r'\\TH')
+
+        # Run test.
+        act = token.parse(self.width)
+
+        # Determine test result.
+        self.assertEqual(exp, act)
+
+
 class ParseTokenTestCase(ut.TestCase):
     def setUp(self):
         self.width = 24
@@ -1298,6 +1341,30 @@ class ParseTokenTestCase(ut.TestCase):
         indent = 2
         self.parse_test(exp, token, margin, indent)
 
+    def test_indented_paragraph_tags_handle_escapes(self):
+        """If the IndentedParagraph's tag contains escaped text, that
+        escape is parsed properly.
+        """
+        exp = (
+            (
+                '.   spam eggs bacon ham\n'
+                '    baked beans spam\n'
+                '    spam eggs spam eggs\n'
+                '    bacon ham baked\n'
+                '    beans tomato\n'
+                '\n'
+            ),
+            0,
+            4,
+        )
+        token = man.IndentedParagraph(r'\.', '4', [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
+
     def test_indented_paragraph_with_tag(self):
         """If the IndentedParagraph has a tag and the tag is longer
         than the indent, the tag should be printed at the margin
@@ -1483,6 +1550,30 @@ class ParseTokenTestCase(ut.TestCase):
         margin = 0
         indent = 2
         self.parse_test(exp, token, margin, indent)
+
+    def test_tagged_paragraph_tags_handle_escapes(self):
+        """If the TaggedParagraph's tag contains escaped text, that
+        escape is parsed properly.
+        """
+        exp = (
+            (
+                '.   spam eggs bacon ham\n'
+                '    baked beans spam\n'
+                '    spam eggs spam eggs\n'
+                '    bacon ham baked\n'
+                '    beans tomato\n'
+                '\n'
+            ),
+            0,
+            4,
+        )
+        token = man.TaggedParagraph('4', [r'\.',], [
+            man.Text('spam eggs bacon ham baked beans'),
+            man.Text('spam'),
+            man.Text('spam eggs'),
+            man.Text('spam eggs bacon ham baked beans tomato'),
+        ])
+        self.parse_test(exp, token)
 
     def test_tagged_paragraph_with_short_tag(self):
         """If the TaggedParagraph's tag is shorter than the indent,
