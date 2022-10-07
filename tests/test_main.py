@@ -32,7 +32,7 @@ class ParseCliTestCase(ut.TestCase):
         """
         # Expected value.
         exp = [
-            call(self.filename, wrap_mode='detect'),
+            call(self.filename, wrap_mode='detect', manhelp=False),
         ]
 
         # Test data and state.
@@ -56,7 +56,7 @@ class ParseCliTestCase(ut.TestCase):
         """
         # Expected value.
         exp = [
-            call(self.filename, wrap_mode='long'),
+            call(self.filename, wrap_mode='long', manhelp=False),
         ]
 
         # Test data and state.
@@ -81,7 +81,7 @@ class ParseCliTestCase(ut.TestCase):
         """
         # Expected value.
         exp = [
-            call(self.filename, wrap_mode='man'),
+            call(self.filename, wrap_mode='man', manhelp=False),
         ]
 
         # Test data and state.
@@ -106,7 +106,7 @@ class ParseCliTestCase(ut.TestCase):
         """
         # Expected value.
         exp = [
-            call(self.filename, wrap_mode='no_wrap'),
+            call(self.filename, wrap_mode='no_wrap', manhelp=False),
         ]
 
         # Test data and state.
@@ -114,6 +114,29 @@ class ParseCliTestCase(ut.TestCase):
             'python -m clireader',
             self.filename,
             '-n',
+        ]
+
+        # Run test and gather actuals.
+        main.parse_cli()
+        act = mock_main.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.main')
+    def test_with_man_help(self, mock_main):
+        """When given '-M' as an option, parse_cli should load
+        the help file for manlike formatting in the viewer.
+        """
+        # Expected value.
+        exp = [
+            call('', wrap_mode='man', manhelp=True),
+        ]
+
+        # Test data and state.
+        sys.argv = [
+            'python -m clireader',
+            '-M',
         ]
 
         # Run test and gather actuals.

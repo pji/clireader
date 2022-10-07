@@ -4,6 +4,7 @@ clireader
 
 A module for paging through text in the terminal.
 """
+from importlib.resources import open_text
 from pathlib import Path
 from re import match
 from textwrap import wrap
@@ -625,6 +626,17 @@ def load_document(
     return Pager(text, title, height, width, wrap_mode)
 
 
+def load_manhelp(height: int, width: int) -> Pager:
+    # Get the text from the manhelp document.
+    title = 'manlike_formatting.man'
+    default_file = open_text('clireader.data', title)
+    text = default_file.read()
+    default_file.close()
+
+    # Return it as a Pager for viewing.
+    return Pager(text, title, height, width, 'man')
+
+
 def read_file(filename: str | Path) -> str:
     """Read the contents of a file.
 
@@ -665,7 +677,11 @@ def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
 
 
 # The main loop.
-def main(filename: str, wrap_mode: str = 'detect') -> None:
+def main(
+    filename: str = '',
+    wrap_mode: str = 'detect',
+    manhelp: bool = False
+) -> None:
     """The main program loop for clireader.
 
     :param filename: The path to the file to display.
@@ -674,12 +690,15 @@ def main(filename: str, wrap_mode: str = 'detect') -> None:
     """
     current_page = 0
     viewer = Viewer()
-    pager = load_document(
-        filename,
-        viewer.page_height,
-        viewer.page_width,
-        wrap_mode
-    )
+    if manhelp:
+        pager = load_manhelp(viewer.page_height, viewer.page_width)
+    else:
+        pager = load_document(
+            filename,
+            viewer.page_height,
+            viewer.page_width,
+            wrap_mode
+        )
 
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         update_page(viewer, pager, current_page)

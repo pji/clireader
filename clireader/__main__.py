@@ -10,7 +10,7 @@ import sys
 from clireader import clireader
 
 
-def parse_cli() -> None:
+def parse_cli() -> bool:
     """Parse the arguments used to invoke clireader."""
     # Create the parser.
     p = ArgumentParser(
@@ -20,8 +20,9 @@ def parse_cli() -> None:
     p.add_argument(
         'filename',
         help='The path to the file to read.',
+        nargs='?',
         action='store',
-        type=str
+        type=str,
     )
     p.add_argument(
         '-l', '--longwrap',
@@ -34,6 +35,11 @@ def parse_cli() -> None:
         action='store_true'
     )
     p.add_argument(
+        '-M', '--manhelp',
+        help='Help for writing manlike formatting.',
+        action='store_true'
+    )
+    p.add_argument(
         '-n', '--nowrap',
         help='Do not rewrap the text.',
         action='store_true'
@@ -41,6 +47,25 @@ def parse_cli() -> None:
 
     # Parse the arguments.
     args = p.parse_args()
+
+    # Unless invoking manhelp a filepath must be given.
+    if not args.filename and not args.manhelp:
+        p.print_usage()
+        print('clireader: error: must be given either a filename or -M')
+        return False
+
+    # Display the help for writing man-like format.
+    if args.manhelp:
+        wrap_mode = 'man'
+        args.filename = ''
+        clireader.main(
+            args.filename,
+            wrap_mode=wrap_mode,
+            manhelp=args.manhelp
+        )
+        return True
+
+    # Otherwise, open the file using the wrapping mode.
     wrap_mode = 'detect'
     if args.nowrap:
         wrap_mode = 'no_wrap'
@@ -48,7 +73,11 @@ def parse_cli() -> None:
         wrap_mode = 'man'
     if args.longwrap:
         wrap_mode = 'long'
-    clireader.main(args.filename, wrap_mode=wrap_mode)
+    if args.manhelp:
+        wrap_mode = 'man'
+        args.filename = ''
+    clireader.main(args.filename, wrap_mode=wrap_mode, manhelp=args.manhelp)
+    return True
 
 
 if __name__ == '__main__':

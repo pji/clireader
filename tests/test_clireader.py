@@ -511,6 +511,26 @@ class MainTestCase(TerminalTestCase):
                 self.width
             )
 
+    def test_load_manhelp(self):
+        """If the manhelp parameter is True, load the manhelp file
+        into the viewer.
+        """
+        exp = [
+            *self.print_frame_calls,
+            call(self.loc.format(1, 2) + f'┤manlike_formatting.man├'),
+            call(self.loc.format(1, 17) + f'┤1/145├'),
+            *self.print_commands_calls_first,
+            *self.print_clear_calls,
+            call('\x1b[3;3HMANLIKE_FORMATTINGMANLIKE_FORMATTING'),
+            call('\x1b[4;3H'),
+            call('\x1b[5;3H'),
+            call('\x1b[6;3H'),
+        ]
+        user_input = [
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input, {'manhelp': True,})
+
 
 class PagerTestCase(ut.TestCase):
     def setUp(self):
