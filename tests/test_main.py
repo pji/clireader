@@ -74,6 +74,31 @@ class ParseCliTestCase(ut.TestCase):
         self.assertListEqual(exp, act)
 
     @patch('clireader.clireader.main')
+    def test_with_filename_and_man_wrap_arg(self, mock_main):
+        """When given a filename and '-l' as an option, parse_cli
+        should load that file in the viewer only rewrapping the long
+        lines.
+        """
+        # Expected value.
+        exp = [
+            call(self.filename, wrap_mode='man'),
+        ]
+
+        # Test data and state.
+        sys.argv = [
+            'python -m clireader',
+            self.filename,
+            '-m',
+        ]
+
+        # Run test and gather actuals.
+        main.parse_cli()
+        act = mock_main.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
+
+    @patch('clireader.clireader.main')
     def test_with_filename_and_no_wrap_arg(self, mock_main):
         """When given a filename and '-n' as an option, parse_cli
         should load that file in the viewer without rewrapping the

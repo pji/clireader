@@ -29,6 +29,11 @@ def parse_cli() -> None:
         action='store_true'
     )
     p.add_argument(
+        '-m', '--man',
+        help='Use manlike formatting.',
+        action='store_true'
+    )
+    p.add_argument(
         '-n', '--nowrap',
         help='Do not rewrap the text.',
         action='store_true'
@@ -39,6 +44,8 @@ def parse_cli() -> None:
     wrap_mode = 'detect'
     if args.nowrap:
         wrap_mode = 'no_wrap'
+    if args.man:
+        wrap_mode = 'man'
     if args.longwrap:
         wrap_mode = 'long'
     clireader.main(args.filename, wrap_mode=wrap_mode)

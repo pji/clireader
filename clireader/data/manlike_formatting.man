@@ -40,3 +40,105 @@ right-aligns it.
 .IP
 Each manlike page should start with a .TH macro, but it's not strictly
 required.
+
+.TP
+\.SH [heading-text]
+Set the given
+.I heading-text
+as a section header. Section headers reset all margin and indent changes.
+They are set bold and are flush with the left margin. If a
+.I heading-text
+parameter is not passed, the next line following the macro will be set
+as the
+.I heading-text.
+Any following lines or text macros become the first paragraph of the
+section.
+
+.TP
+\.SS [subheading-text]
+Set the given
+.I subheading-text
+as a subsection header. Section headers reset all margin and indent changes.
+They are set bold and are two spaces indented from the left margin. If a
+.I subheading-text
+parameter is not passed, the next line following the macro will be set
+as the
+.I subheading-text.
+Any following lines or text macros become the first paragraph of the
+subsection.
+
+.TP
+\.EX
+.TQ
+\.EE
+Begin and end an example. The text following this macro will be set
+against the left margin as given. Any leading space and hard new lines
+will be retained.
+
+.TP
+\.RS [indent]
+Move the left margin
+.I indent
+number of characters to the right.
+
+.TP
+\.RE [indent]
+Move the left margin
+.I indent
+number of characters to the left. This works differently than the
+equivalent man macro does because clireader doesn't keep track of
+indent levels.
+
+.SS
+Paragraph Macros
+These macros set blocks of text as paragraphs.
+
+.RS 4
+.TP
+\.P
+.TQ
+\.LP
+.TQ
+\.PP
+Begin a new paragraph. The following text and text macros will be
+reflowed as a single paragraph. Any previous paragraph indentation will
+be reset to four characters. The paragraph will then be set indented
+four characters to the right of the left margin.
+
+.TP
+\.TP [indent]
+Set a paragraph with a leading tag, and the remainder of the text
+indented. The next line following the macro will become the
+.I tag
+which will be set flush to the left margin. If the length of the tag
+is less than the length of the
+.I indent,
+then the tag will be placed on the same line as the first line of
+the paragraph. Otherwise the paragraph will start a line down from
+the tag.
+
+.IP
+If
+.I indent
+is passed, then the paragraph after the tag will be indented that
+number of characters. If no indent is passed but there is a previous
+tagged paragraph that set the indent, the paragraph will be indented
+by the amount set by the previous tagged paragraph. Otherwise, the
+paragraph will be indented four characters.
+
+.TP
+\.TQ
+Use after the header is set for a tagged paragraph to add an additional
+tag to the paragraph.
+
+.TP
+\.IP [tag] [indent]
+Set an indented paragraph. If a
+.I tag
+is given, the paragraph is tagged, similar to a tagged paragraph. The
+.I indent
+parameter sets how far the paragraph is indented from the left margin.
+If no indent parameter is passed but a previous tagged or indented
+paragraph set an indent amount, the paragraph will be indented by the
+amount set by the previous paragraph. Otherwise, the indent defaults
+to four.
