@@ -142,3 +142,115 @@ If no indent parameter is passed but a previous tagged or indented
 paragraph set an indent amount, the paragraph will be indented by the
 amount set by the previous paragraph. Otherwise, the indent defaults
 to four.
+
+.SS
+Command Synopsis Macros
+These macros simplify creating command synopses for man pages.
+
+.RS 4
+.TP
+\.SY command
+Begin the synopsis of a command. The
+.I command
+parameter sets the name of the command.
+
+.TP
+\.OP option-name [option-argument]
+Define an option for the command. The
+.I option-name
+parameter provides the string that invokes the option. If the option
+can take an argument, pass it as
+.I option-argument.
+
+.TP
+\.YS
+End the synopsis.
+
+.SS
+Hyperlink and Email Macros
+Macros that handle active links in the terminal.
+
+.RS 4
+.TP
+\.MT address
+Set an email address. The parameter
+.I address
+is the email address. The following lines are the text shown to the user
+as the link.
+
+.TP
+\.ME [punctuation]
+End the setting of an email address. The
+.I punctuation
+parameter sets the punctuation mark to follow the link.
+
+.TP
+\.UR URL
+Set a URL link. The parameter
+.I URL
+is the URL for the link. The following lines are the text shown to the
+user as the link.
+
+.TP
+\.UE [punctuation]
+End the setting of the link. The
+.I punctuation
+parameter sets the punctuation mark to follow the link.
+
+.SS
+Font Style Macros
+Macros handle the font styling.
+
+.RS 4
+.TP
+\.B [text]
+Set the text given as
+.I text
+as bold. If the text parameter is not given, set the text of the next
+line as bold.
+
+.TP
+\.I [text]
+Set the text given as
+.I text
+with an underline. If the text parameter is not given, set the text of
+the next line with an underline. 
+
+.TP
+\.SM [text]
+Sets the text given as
+.I text,
+but doesn't make any changes to it. In man pages this should make the
+text smaller, but that doesn't work on most terminals.
+
+.TP
+\.SB [text]
+Set the text given as
+.I text
+as bold. If the text parameter is not given, set the text of the next
+line as bold. In man pages this should also make the text smaller, but
+that doesn't work on most terminals.
+
+.TP
+\.BI bold-text italic-text ...
+Set each argument in bold then underline alternately.
+
+.TP
+\.BR bold-text roman-text ...
+Set each argument in bold then roman alternately.
+
+.TP
+\.IB italic-text bold-text ...
+Set each argument in underline then bold alternately.
+
+.TP
+\.IR italic-text roman-text ...
+Set each argument in underline then roman alternately.
+
+.TP
+\.RB roman-text bold-text ...
+Set each argument in roman then bold alternately.
+
+.TP
+\.RI roman-text italic-text ...
+Set each argument in roman then underline alternately.

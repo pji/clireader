@@ -421,6 +421,64 @@ class MainTestCase(TerminalTestCase):
         ]
         self.main_test(exp, user_input, {})
 
+    def test_next_on_last_page_does_nothing(self):
+        """Hitting 'n' on the last page should not do anything."""
+        exp = [
+            *self.print_calls_1,
+            self.print_frame_calls[-1],
+            call(
+                self.loc.format(8, 3)
+                + '┤Jump to page > '
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 19)
+                + '3'
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            call(
+                self.loc.format(8, 20)
+                + '9'
+                + self.rev
+                + ' '
+                + self.nml
+                + '├',
+                end='',
+                flush=True
+            ),
+            *self.print_calls_39,
+        ]
+        user_input = [
+            Keystroke('j'),
+            Keystroke('3'),
+            Keystroke('9'),
+            Keystroke('\n'),
+            Keystroke('n'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input, {})
+
+    def test_back_on_first_page_does_nothing(self):
+        """Hitting 'b' on the first page should not do anything."""
+        exp = [
+            *self.print_calls_1,
+        ]
+        user_input = [
+            Keystroke('b'),
+            Keystroke('x'),
+        ]
+        self.main_test(exp, user_input, {})
+
     def test_error_if_path_does_not_exist(self):
         """If the path given doesn't exist, raise a FileDoesNotExist
         exception.

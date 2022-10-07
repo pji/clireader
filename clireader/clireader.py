@@ -505,8 +505,10 @@ def back_page(viewer: Viewer, pager: Pager, page: int) -> int:
     :return: The new page number being viewed.
     :rtype: int
     """
-    page -= 1
-    return update_page(viewer, pager, page)
+    if page > 0:
+        page -= 1
+        return update_page(viewer, pager, page)
+    return page
 
 
 def flow(viewer: Viewer, pager: Pager, page: int) -> int:
@@ -565,8 +567,10 @@ def next_page(viewer: Viewer, pager: Pager, page: int) -> int:
     :return: The new page number being viewed.
     :rtype: int
     """
-    page += 1
-    return update_page(viewer, pager, page)
+    if page < pager.page_count - 1:
+        page += 1
+        return update_page(viewer, pager, page)
+    return page
 
 
 # Utility functions
