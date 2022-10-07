@@ -10,6 +10,15 @@ What does it do?
 It allows you to page through text files in a terminal.
 
 
+Why Did I Make This?
+====================
+Great question. Mainly it's to allow me to add help screens to a
+blackjack program I'm writing. A certain amount of curiosity about
+how Unix `man` pages get written was also involved. There were
+probably better ways to address both of those, but this is what I
+chose to do.
+
+
 To Run
 ======
 To open a document with clireader, use `pip` to install the package
@@ -18,6 +27,40 @@ and run the following::
     clireader path/to/file
 
 Where `path/to/file` is the file path to the document you want to open.
+
+The commands at the bottom of the terminal window allow you to navigate
+the document and otherwise interact with `clireader`:
+
+*   `Back` Go back one page.
+*   `Flow` Reflow the document (see Wrapping Modes below).
+*   `Jump` Go to a specific page.
+*   `Next` Go forward one page.
+*   `eXit` Quit out of `clireader`
+
+Invoke the command by typing the letter capitalized in the command.
+
+
+Wrapping Modes
+--------------
+Documents can be opened in a few different "wrapping modes." This mainly
+affects how lines longer than the terminal are handled, but they can have
+other formatting effects. While the default is to try and rewrap the
+entire document for the width of the current terminal, other options can
+be set when invoking `clireader` from the command line:
+
+*   `-l` Only rewrap the long lines.
+*   `-m` Use "manlike" formatting.
+*   `-n` Truncate long lines rather than rewrapping them.
+
+The wrapping mode can also be changed while `clireader` is running using
+the "Flow" command.
+
+
+Manlike Formatting
+------------------
+"Manlike formatting" interprets commands similar to the `troff` macros
+used to format Unix `man` pages to allow additional formatting when
+reflowing a document. Use the `clireader -M` to learn more.
 
 
 To-Do
