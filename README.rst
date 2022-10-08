@@ -21,8 +21,8 @@ chose to do.
 
 To Run
 ======
-To open a document with clireader, use `pip` to install the package
-and run the following::
+To open a document with clireader, download the repository and use `pip`
+to install the package. The run the following::
 
     clireader path/to/file
 
