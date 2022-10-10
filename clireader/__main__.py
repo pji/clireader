@@ -58,7 +58,7 @@ def parse_cli() -> bool:
     if args.manhelp:
         wrap_mode = 'man'
         args.filename = ''
-        clireader.main(
+        clireader.view_file(
             args.filename,
             wrap_mode=wrap_mode,
             manhelp=args.manhelp
@@ -76,8 +76,11 @@ def parse_cli() -> bool:
     if args.manhelp:
         wrap_mode = 'man'
         args.filename = ''
-    clireader.main(args.filename, wrap_mode=wrap_mode, manhelp=args.manhelp)
-    return True
+    return clireader.view_file(
+        args.filename,
+        wrap_mode=wrap_mode,
+        manhelp=args.manhelp
+    )
 
 
 if __name__ == '__main__':

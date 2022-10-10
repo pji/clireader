@@ -25,7 +25,7 @@ class ParseCliTestCase(ut.TestCase):
         sys.argv = self.argv
 
     # Tests.
-    @patch('clireader.clireader.main')
+    @patch('clireader.clireader.view_file')
     def test_with_filename_arg(self, mock_main):
         """When given a filename as an option, parse_cli should load
         that file in the viewer.
@@ -48,7 +48,7 @@ class ParseCliTestCase(ut.TestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
-    @patch('clireader.clireader.main')
+    @patch('clireader.clireader.view_file')
     def test_with_filename_and_long_wrap_arg(self, mock_main):
         """When given a filename and '-l' as an option, parse_cli
         should load that file in the viewer only rewrapping the long
@@ -73,7 +73,7 @@ class ParseCliTestCase(ut.TestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
-    @patch('clireader.clireader.main')
+    @patch('clireader.clireader.view_file')
     def test_with_filename_and_man_wrap_arg(self, mock_main):
         """When given a filename and '-l' as an option, parse_cli
         should load that file in the viewer only rewrapping the long
@@ -98,7 +98,7 @@ class ParseCliTestCase(ut.TestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
-    @patch('clireader.clireader.main')
+    @patch('clireader.clireader.view_file')
     def test_with_filename_and_no_wrap_arg(self, mock_main):
         """When given a filename and '-n' as an option, parse_cli
         should load that file in the viewer without rewrapping the
@@ -123,7 +123,7 @@ class ParseCliTestCase(ut.TestCase):
         # Determine test result.
         self.assertListEqual(exp, act)
 
-    @patch('clireader.clireader.main')
+    @patch('clireader.clireader.view_file')
     def test_with_man_help(self, mock_main):
         """When given '-M' as an option, parse_cli should load
         the help file for manlike formatting in the viewer.

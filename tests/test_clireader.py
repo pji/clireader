@@ -243,7 +243,7 @@ class MainTestCase(TerminalTestCase):
         filename = self.filename
 
         # Run test and gather actuals.
-        loop = clireader.main(filename, **main_kwargs)
+        loop = clireader.view_file(filename, **main_kwargs)
         act = mock_print.mock_calls
 
         # Determine test result.
@@ -530,6 +530,37 @@ class MainTestCase(TerminalTestCase):
             Keystroke('x'),
         ]
         self.main_test(exp, user_input, {'manhelp': True,})
+
+    # view_text tests.
+    @patch('blessed.Terminal.inkey')
+    @patch('clireader.clireader.Terminal.width', new_callable=PropertyMock)
+    @patch('clireader.clireader.Terminal.height', new_callable=PropertyMock)
+    @patch('clireader.clireader.print')
+    def test_view_text(
+        self,
+        mock_print,
+        mock_height,
+        mock_width,
+        mock_inkey
+    ):
+        # Expected value.
+        exp = self.print_calls_1
+
+        # Test data and state.
+        mock_height.return_value = self.height
+        mock_width.return_value = self.width
+        mock_inkey.side_effect = (Keystroke('x'),)
+        with open('tests/data/spam.txt') as fh:
+            text = fh.read()
+        title = 'spam.txt'
+        wrap_mode = 'detect'
+
+        # Run test and gather actuals.
+        loop = clireader.view_text(text, title, wrap_mode)
+        act = mock_print.mock_calls
+
+        # Determine test result.
+        self.assertListEqual(exp, act)
 
 
 class PagerTestCase(ut.TestCase):

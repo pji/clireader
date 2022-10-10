@@ -677,12 +677,12 @@ def update_page(viewer: Viewer, pager: Pager, page: int) -> int:
 
 
 # The main loop.
-def main(
+def view_file(
     filename: str = '',
     wrap_mode: str = 'detect',
     manhelp: bool = False
-) -> None:
-    """The main program loop for clireader.
+) -> bool:
+    """Open the file and display it.
 
     :param filename: The path to the file to display.
     :return: None.
@@ -699,7 +699,45 @@ def main(
             viewer.page_width,
             wrap_mode
         )
+    return main(viewer, pager, current_page)
 
+
+def view_text(
+    text: str = '',
+    title: str = '',
+    wrap_mode: str = 'detect',
+) -> bool:
+    """Open the file and display it.
+
+    :param filename: The path to the file to display.
+    :return: None.
+    :rtype: NoneType
+    """
+    current_page = 0
+    viewer = Viewer()
+    pager = Pager(
+        text,
+        title,
+        viewer.page_height,
+        viewer.page_width,
+        wrap_mode
+    )
+    return main(viewer, pager, current_page)
+
+
+def main(
+    viewer: Viewer,
+    pager: Pager,
+    current_page: int
+) -> bool:
+    """The main program loop for clireader.
+
+    :param viewer: The Viewer controlling the terminal display.
+    :param pager: The Pager managing the document being viewed.
+    :param page: The page number currently being viewed.
+    :return: The new page number being viewed.
+    :rtype: int
+    """
     with viewer.term.fullscreen(), viewer.term.hidden_cursor():
         update_page(viewer, pager, current_page)
         while True:
@@ -713,4 +751,5 @@ def main(
             elif command == 'n':
                 current_page = next_page(viewer, pager, current_page)
             elif command == 'x':
-                break
+                return False
+    return True
