@@ -543,6 +543,10 @@ class MainTestCase(TerminalTestCase):
         mock_width,
         mock_inkey
     ):
+        """Given a document text, a title for the document, and a text-
+        wrapping mode, view_text() should display the document in a
+        viewer.
+        """
         # Expected value.
         exp = self.print_calls_1
 
